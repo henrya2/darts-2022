@@ -14,6 +14,8 @@
 #include <darts/ray.h>
 #include <darts/spherical.h>
 
+#include <filesystem>
+
 // function declarations; definitions are below main
 void test_vectors_and_matrices();
 void test_color_and_image();
@@ -21,6 +23,10 @@ void test_color_and_image();
 int main(int argc, char **argv)
 {
     darts_init();
+
+    std::filesystem::path cwd = std::filesystem::current_path();
+    fmt::print("\n");
+    fmt::print("cwd = {}\n", cwd.string());
 
     test_vectors_and_matrices();
     test_color_and_image();
@@ -101,12 +107,12 @@ void test_vectors_and_matrices()
 
     spdlog::info("You can access specific components using x, y, and z.");
     // TODO: Output the z coordinate of the normal
-    spdlog::info("The z coordinate of v3 is {}.\n", "TODO");
+    spdlog::info("The z coordinate of v3 is {}.\n", v3.z);
 
     spdlog::info("We can also element-wise add, subtract, and multiply vectors:");
     spdlog::info("v1 + v2:\n   {}\n + {}\n = {}", v1, v2, v1 + v2);
     // TODO: divide vector 1 by vector 3
-    spdlog::info("v1 / v3:\n   {}\n / {}\n = {}\n", v1, v3, "TODO");
+    spdlog::info("v1 / v3:\n   {}\n / {}\n = {}\n", v1, v3, v1 / v3);
 
     spdlog::info("or perform mixed vector-scalar arithmetic");
     spdlog::info("scalar * v2:\n   {}\n * {}\n = {}", 2.0f, v2, 2.0f * v2);
@@ -122,12 +128,12 @@ void test_vectors_and_matrices()
 
     // TODO: look in darts/math.h to find an appropriate function to call to compute
     // the dot product and cross product between two vectors.
-    spdlog::info("The dot product of v1 and v3 is: {}", "TODO");
-    spdlog::info("The cross product of v1 and v2 is: {}", "TODO");
+    spdlog::info("The dot product of v1 and v3 is: {}", dot(v1, v3));
+    spdlog::info("The cross product of v1 and v2 is: {}", cross(v1, v2));
 
     // TODO: compute the angle between v1 and v3 (in degrees) using
     // either the dot or cross product. Use the rad2deg function from common.h.
-    float degrees = 0.0f;
+    float degrees = Spherical::rad2deg(std::acos(dot(normalize(v1), normalize(v3))));
     spdlog::info("The angle between v1 and v3 is: {}", degrees);
     if (std::abs(degrees - 80.0787f) < 1e-4f)
         spdlog::info("Result correct!\n");
@@ -196,7 +202,7 @@ void test_color_and_image()
     // pinkish.z, but this may not be very informative
 
     // TODO: Print out the green channel of pinkish
-    spdlog::info("Green channel of pinkish is: {}", 0.0f);
+    spdlog::info("Green channel of pinkish is: {}", pinkish[1]);
 
     spdlog::info("Blue channel of still_red is: {}", still_red[2]);
 
@@ -209,7 +215,7 @@ void test_color_and_image()
 
     // TODO: Compute and print the luminance of pinkish. Look at darts/math.h to see
     // what method you might need
-    spdlog::info("The luminance of pinkish is: {}", 0.0f);
+    spdlog::info("The luminance of pinkish is: {}", luminance(pinkish));
 
     // Darts also provides the Image3f class (see image.h|cpp) to load, store,
     // manipulate, and write images.
@@ -255,8 +261,18 @@ void test_color_and_image()
 
     spdlog::info("Creating gradient image.");
 
-    put_your_code_here("Populate an image with a color gradient and save to \"scenes/assignment0/gradient.png\"");
+    for (int row = 0; row < gradient.height(); ++row)
+    {
+        for (int col = 0; col < gradient.width(); ++col)
+        {
+            gradient(col, row).x = lerp(0.f, 1.0f, col / (gradient.width() - 1.f));
+            gradient(col, row).y = lerp(0.f, 1.0f, row / (gradient.height() - 1.f));
+            gradient(col, row).z = 0;
+        }
+    }
+
     spdlog::info("Saving image \"gradient.png\" ...");
+    gradient.save("./scenes/assignment0/gradient.png");
 
     // Now, we will load an image, modify it, and save it back to disk.
     Image3f image;
@@ -264,7 +280,7 @@ void test_color_and_image()
     // TODO: Load the image scenes/assignment0/cornellbox.png into the
     // ``image'' variable
     spdlog::info("Loading image cornellbox.png ...");
-    put_your_code_here("Load the image \"scenes/assignment0/cornellbox.png\".");
+    image.load("./scenes/assignment0/cornellbox.png");
     // Hint: Take a look at Image3f::load
     // Keep in mind filenames are interpreted relative to your current
     // working directory
@@ -272,12 +288,16 @@ void test_color_and_image()
     // TODO: Convert the image to grayscale. Loop over every pixel and convert
     // it to grayscale by replacing every pixel with its luminance
     spdlog::info("Converting image to grayscale....");
-    put_your_code_here("Convert the image to grayscale.");
+    for (int i = 0; i < image.length(); ++i)
+    {
+        float lum = luminance(image(i));
+        image(i) = Color3f(lum, lum, lum);
+    }
 
     // TODO: Save the image to scenes/assignment0/cornell_grayscale.png
     // Hint: Take a look at Image3f::save
     spdlog::info("Saving image cornell_grayscale.png....");
-    put_your_code_here("Save the image to \"scenes/assignment0/cornell_grayscale.png\".");
+    image.save("./scenes/assignment0/cornell_grayscale.png");
 
     spdlog::info("Done!\n");
 }
