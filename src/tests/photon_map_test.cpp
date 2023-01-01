@@ -134,8 +134,8 @@ void PhotonMapTest::run()
             for (int x = 0; x < pdf.width(); x++)
             {
                 float accum = 0.f;
-                for (int sx = 0; sx < super_samples; ++sx)
-                    for (int sy = 0; sy < super_samples; ++sy)
+                for (int sx = 0; sx < (int)super_samples; ++sx)
+                    for (int sy = 0; sy < (int)super_samples; ++sy)
                         accum += this->pdf(
                             pixel_to_sample(Vec2f{x + (sx + 0.5f) / super_samples, y + (sy + 0.5f) / super_samples}),
                             rng.nextFloat());
