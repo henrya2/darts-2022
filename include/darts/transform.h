@@ -61,7 +61,7 @@ struct Transform
         // should be transformed without any translation applied -- meaning you should interpret the vector v to be a
         // 4-vector with a 0 in the 4th component.You should return a three-vector through. Given a Vec4f v, you can
         // extract just the xyz components by calling the v.xyz() method.
-        return Vec3f(0.0f, 0.0f, 0.0f);
+        return la::mul(m, Vec4f(v, 0.0f)).xyz();
     }
 
     /// Apply the homogeneous transformation to a 3D normal
@@ -72,7 +72,7 @@ struct Transform
         // The inverse transformation matrix has already been computed for you: m_inv. Similar to vectors, you should
         // not apply translation - use homogeneous coordinate to ensure these are excluded. Make sure to return a
         // normalized (unit-length) transformed normal vector.
-        return Vec3f(0.0f, 0.0f, 0.0f);
+        return la::normalize(la::mul(la::transpose(m_inv), Vec4f(n, 0.0f)).xyz());
     }
 
     /// Transform a point by an arbitrary matrix in homogeneous coordinates
@@ -83,8 +83,7 @@ struct Transform
         //
         // The result of the transform is another 4-vector, (x, y, z, w). You should return the first 3 elements of this
         // vector (use the .xyz() method), divided by the 4th coordinate
-        put_your_code_here("Assignment 1: insert your Transform*Vec3f code here");
-        return Vec3f(0.0f, 0.0f, 0.0f);
+        return la::mul(m, Vec4f(p, 1.f)).xyz();
     }
 
     /// Apply the homogeneous transformation to a ray
@@ -94,8 +93,7 @@ struct Transform
         // Transform these, and return a new ray with the transformed coordinates.
 
         // IMPORTANT: The ray you return should have the same mint and maxt as the original ray
-        put_your_code_here("Assignment 1: insert your Transform*Ray3f code here");
-        return Ray3f();
+        return Ray3f(point(r.o), vector(r.d), r.mint, r.maxt);
     }
 
     /// Transform the axis-aligned Box and return the bounding box of the result
