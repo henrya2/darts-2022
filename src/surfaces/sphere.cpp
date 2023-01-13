@@ -67,6 +67,7 @@ bool Sphere::intersect(const Ray3f &ray, HitInfo &hit) const
     //       hit distance (t), and normal (n) and fill in these values
     float t = t_shape_hit;
     Vec3f p = ray(t);
+    /*
     Vec3f n = p - m_xform.m.w.xyz();
     // Only handle positive scale here, ignore rotation either. 
     // N = nabula(f(x, y, z)), f(x, y, z) = (x-c_x)^2/a^2 + (y-c_y)^2/b^2 + (z-c_z)^2/c^ - 1 while a = scale_x, b = scale_y, c = scale_z
@@ -77,6 +78,8 @@ bool Sphere::intersect(const Ray3f &ray, HitInfo &hit) const
     n.y /= y_a * y_a;
     n.z /= z_a * z_a;
     n = normalize(n);
+    */
+    Vec3f n = m_xform.normal(tray(t));
 
     // For this assignment you can leave these two values as is
     Vec3f shading_normal = n;
