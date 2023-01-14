@@ -41,7 +41,16 @@ bool Lambertian::scatter(const Ray3f &ray, const HitInfo &hit, Color3f &attenuat
     //       a sphere, not *in* the sphere (the text book gets this wrong)
     //       If you normalize the point, you can force it to be on the sphere always, so
     //       add normalize(random_in_unit_sphere()) to your shading normal
-    return false;
+    attenuation = albedo;
+    Vec3f unit_sphere_p = normalize(random_in_unit_sphere());
+    Vec3f target = hit.p + hit.sn + unit_sphere_p;
+    Vec3f out_dir = target - hit.p;
+    if (dot(normalize(out_dir), hit.sn) < -Ray3f::epsilon) 
+    {
+        out_dir = -out_dir;
+    }
+    scattered = Ray3f(hit.p, out_dir);
+    return true;
 }
 
 
