@@ -57,6 +57,14 @@ bool refract(const Vec3f &v_, const Vec3f &n, float eta, Vec3f &refracted)
         return false;
 }
 
+Vec3f refract(const Vec3f& v_, const Vec3f& n, float eta)
+{
+    auto cos_theta = dot(-v_, n);
+    Vec3f r_out_perp =  eta * (v_ + cos_theta*n);
+    Vec3f r_out_parallel = -sqrt(abs(1.f - la::length2(r_out_perp))) * n;
+    return r_out_perp + r_out_parallel;
+}
+
 /**
     \dir
     \brief Darts Material plugins source directory

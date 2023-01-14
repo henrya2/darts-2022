@@ -156,6 +156,18 @@ float fresnel_dielectric(float cos_theta_i, float ext_ior, float int_ior);
 bool refract(const Vec3f &v, const Vec3f &n, float eta, Vec3f &refracted);
 
 /**
+    Generates a refracted direction, assuming refraction is possible based on the incident direction and refractive
+    indices.
+
+    \param [in]  v          The incident ray's direction (points at surface)
+    \param [in]  n          The surface normal of the incident ray
+    \param [in]  eta        The ratio of the index of refraction on the incident side to the index of refraction on the
+                            transmitted side
+    \return                 un-normalized, refracted direction
+*/
+Vec3f refract(const Vec3f &v, const Vec3f &n, float eta);
+
+/**
     Reflects a vector, \p v, over another vector, \p n.
 
     \param [in] v   The incident ray's direction (points at surface)
