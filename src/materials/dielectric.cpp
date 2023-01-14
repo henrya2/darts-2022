@@ -32,7 +32,7 @@ bool Dielectric::scatter(const Ray3f &ray, const HitInfo &hit, Color3f &attenuat
     attenuation = Color3f(1.f, 1.f, 1.f);
     float cos_theta_i = dot(normalize(-ray.d), hit.sn);
     bool entering = cos_theta_i > 0.0f;
-    float refraction_ratio = entering ? ior : (1.f / ior);
+    float refraction_ratio = entering ? (1.f / ior) : ior;
     float fr = fresnel_dielectric(cos_theta_i, 1.f, ior);
 
     Vec3f scatter_dir;
