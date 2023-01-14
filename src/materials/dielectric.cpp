@@ -32,15 +32,17 @@ bool Dielectric::scatter(const Ray3f &ray, const HitInfo &hit, Color3f &attenuat
     attenuation = Color3f(1.f, 1.f, 1.f);
     float cos_theta_i = dot(normalize(-ray.d), hit.sn);
     bool entering = cos_theta_i > 0.0f;
+    // Shading normal should be inverted while ray starts inward
+    Vec3f sn = entering ? hit.sn : -hit.sn;
     float refraction_ratio = entering ? (1.f / ior) : ior;
     float fr = fresnel_dielectric(cos_theta_i, 1.f, ior);
 
-    Vec3f scatter_dir;
-
     Vec3f refracted;
-    if (!refract(normalize(ray.d), hit.sn, refraction_ratio, refracted) || fr > randf())
+
+    Vec3f scatter_dir;
+    if (fr > randf() || !refract(ray.d, sn, refraction_ratio, refracted))
     {
-        scatter_dir = reflect(ray.d, hit.sn);
+        scatter_dir = reflect(normalize(ray.d), sn);
     }
     else
     {
