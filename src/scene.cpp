@@ -40,9 +40,27 @@ bool Scene::intersect(const Ray3f &ray, HitInfo &hit) const
 Color3f Scene::recursive_color(const Ray3f &ray, int depth) const
 {
     constexpr int max_depth = 64;
-    put_your_code_here("Assignment 1: Insert your recursive_color() code here");
-    return Color3f(0.0f, 0.0f, 0.0f);
 
+    HitInfo hit;
+    if (intersect(ray, hit))
+    {
+        Color3f attenuation;
+        Ray3f scattered;
+        Color3f emitted_color = hit.mat->emitted(ray, hit);
+        if (depth < max_depth && hit.mat->scatter(ray, hit, attenuation, scattered))
+        {
+            auto rec_color = recursive_color(scattered, depth + 1);
+            return emitted_color + attenuation * rec_color;
+        }
+        else
+        {
+            return emitted_color;
+        }
+    }
+    else
+    {
+        return background(ray);
+    }
     // TODO: Recursively raytrace the scene, similar to the code you wrote in darts_tutorial1
     //       Different to before, you should also take into account surfaces that are self-emitting
     // Pseudo-code:
@@ -64,7 +82,23 @@ Image3f Scene::raytrace() const
     // allocate an image of the proper size
     auto image = Image3f(m_camera->resolution().x, m_camera->resolution().y);
 
-    put_your_code_here("Assignment 1: insert your raytrace() code here");
+    Progress progress("Rendering", image.length());
+    // Generate a ray for each pixel in the ray image
+    for (auto y : range(image.height()))
+    {
+        for (auto x : range(image.width()))
+        {
+            Color3f sum_color = Color3f(0.f);
+            for (auto i : range(m_num_samples))
+            {
+                auto ray = m_camera->generate_ray(Vec2f(x + 0.5f + randf(), y + 0.5f + randf()));
+                sum_color += recursive_color(ray, 0);
+            }
+
+            image(x, y) = sum_color / m_num_samples;
+            ++progress;
+        }
+    }
 
     // TODO: Render the image, similar to the tutorial
     // Pseudo-code:
