@@ -46,8 +46,8 @@ int main(int argc, char **argv)
     test_ray_sphere_intersection();
     test_sphere_image();
 
-    // test_materials();
-    // test_recursive_raytracing();
+    test_materials();
+    test_recursive_raytracing();
 
     return 0;
 }
@@ -626,6 +626,12 @@ void test_recursive_raytracing()
 
                 // TODO: Call recursive_color ``num_samples'' times and average the
                 // results. Assign the average color to ``color''
+                Color3f sum_color = Color3f(0.f);
+                for (auto i : range(num_samples))
+                {
+                    sum_color += recursive_color(ray, scene, 0);
+                }
+                color = sum_color / num_samples;
 
                 ray_image(x, y) = color;
                 ++progress;
@@ -653,6 +659,25 @@ Color3f recursive_color(const Ray3f &ray, const SurfaceGroup &scene, int depth)
     //			return black;
     // else:
     // 		return white
+    HitInfo hit;
+    if (scene.intersect(ray, hit)) 
+    {
+        Ray3f scattered;
+        Color3f attenuation;
+        if (depth < max_depth && hit.mat->scatter(ray, hit, attenuation, scattered)) 
+        {
+            Color3f rec_color = recursive_color(scattered, scene, depth + 1);
+            return attenuation * rec_color;
+        } 
+        else 
+        {
+            return Color3f(0.f, 0.f, 0.f);
+        }
+    } 
+    else 
+    {
+        return Color3f(1.f, 1.f, 1.f);
+    }
 
     return Color3f(0.0f);
 
