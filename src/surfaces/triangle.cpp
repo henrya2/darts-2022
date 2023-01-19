@@ -107,22 +107,56 @@ bool single_triangle_intersect(const Ray3f &ray, const Vec3f &p0, const Vec3f &p
     //       You can pick any ray triangle intersection routine you like.
     //       I recommend you follow "Approach 3" from lecture, which is the
     //       Moller-Trumbore algorithm
+    const float EPSILON = 0.0000001;
 
-    put_your_code_here("Insert your ray-triangle intersection code here");
-    return false;
+    Vec3f edge1 = p1 - p0;
+    Vec3f edge2 = p2 - p0;
+    Vec3f pvec = la::cross(ray.d, edge2);
+    float det = dot(edge1, pvec);
+    if (det > -EPSILON && det < EPSILON)
+        return false;
+    float inv_det = 1.f / det;
+
+    Vec3f tvec = ray.o - p0;
+    float mt_u = dot(tvec, pvec) * inv_det;
+    if (mt_u < 0.f || mt_u > 1.f)
+        return false;
+
+    Vec3f qvec = la::cross(tvec, edge1);
+
+    float mt_v = dot(ray.d, qvec) * inv_det;
+    if (mt_v < 0.f || (mt_u + mt_v) > 1.f)
+        return false;
 
     // First, check for intersection and fill in the hit distance t
-    float t = 0.0f;
+    float t = dot(edge2, qvec) * inv_det;
+    if (t < ray.mint || t > ray.maxt)
+        return false;
+
     // You should also compute the u/v (i.e. the alpha/beta barycentric coordinates) of the hit point
     // (Moller-Trumbore gives you this for free)
     float u, v;
+    if (t0 != nullptr && t1 != nullptr && t2 != nullptr)
+    {
+        Vec2f tex0 = *t0;
+        Vec2f tex1 = *t1;
+        Vec2f tex2 = *t2;
+        Vec2f tex = (1 - mt_u - mt_v) * tex0 + mt_u * tex1 + mt_v * tex2;
+        u = tex.x;
+        v = tex.y;
+    }
+    else
+    {
+        u = mt_u;
+        v = mt_v;
+    }
 
     // TODO: If you successfully hit the triangle, you should check if the distance t lies
     //       within the ray's mint/maxt, and return false if it does not
 
     // TODO: Fill in the gn with the geometric normal of the triangle (i.e. normalized cross product of
     // two edges)
-    Vec3f gn = Vec3f(0.0f);
+    Vec3f gn = normalize(la::cross(edge1, edge2));
 
     // Compute the shading normal
     Vec3f sn;
@@ -136,7 +170,7 @@ bool single_triangle_intersect(const Ray3f &ray, const Vec3f &p0, const Vec3f &p
         // TODO: You should compute the shading normal by
         //       doing barycentric interpolation of the per-vertex normals (normal0/1/2)
         //       Make sure to normalize the result
-        sn = Vec3f(0.0f);
+        sn = normalize((1 - mt_u - mt_v) * normal0 + mt_u * normal1 + mt_v * normal2);
     }
     else
     {
