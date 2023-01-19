@@ -36,10 +36,13 @@ Ray3f Camera::generate_ray(const Vec2f &pixel) const
     Vec2f d = (2.f *
             pixel / m_resolution) - 1.f;
 
+    Vec2f rd = m_aperture_radius * random_in_unit_disk();
+    Vec3f offset(rd.x, rd.y, 0);
+
     Vec3f origin(0, 0, 0);
     Vec3f dir;
     dir.x = d.x * (m_size.x / 2.f);
     dir.y = -d.y * (m_size.y / 2.f);
-    dir.z = -1.f;/*-m_focal_distance;*/
-    return m_xform.ray(Ray3f(origin, normalize(dir)));
+    dir.z = -1.f;
+    return m_xform.ray(Ray3f(origin + offset, dir * m_focal_distance - offset));
 }
