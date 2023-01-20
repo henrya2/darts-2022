@@ -11,6 +11,8 @@
 #include <darts/surface_group.h>
 #include <future>
 
+#include <functional>
+
 struct BBHNode;
 
 // STAT_MEMORY_COUNTER("Memory/BBH", treeBytes);
@@ -99,6 +101,27 @@ struct BBHNode : public Surface
     }
 };
 
+namespace
+{
+    bool box_compare(const shared_ptr<Surface>& op1, const shared_ptr<Surface>& op2, int axis)
+    {
+        return op1->bounds().center()[axis] < op2->bounds().center()[axis];
+    }
+
+    std::function<bool(const shared_ptr<Surface>& op1, const shared_ptr<Surface>& op2)> comparors[] = {
+        std::bind(box_compare, std::placeholders::_1, std::placeholders::_2, 0), 
+        std::bind(box_compare, std::placeholders::_1, std::placeholders::_2, 1), 
+        std::bind(box_compare, std::placeholders::_1, std::placeholders::_2, 2)};
+
+    void compute_surfaces_bound(Box3f& bbox, const vector<shared_ptr<Surface>>& surfaces)
+    {
+        for (auto surface : surfaces)
+        {
+            bbox.enclose(surface->bounds());
+        }
+    }
+}
+
 BBHNode::BBHNode(vector<shared_ptr<Surface>> surfaces, Progress &progress, int depth)
 {
     // TODO: Implement BBH construction, following chapter 2 of the book.
@@ -123,7 +146,81 @@ BBHNode::BBHNode(vector<shared_ptr<Surface>> surfaces, Progress &progress, int d
     //     -- After construction, you need to compute the bounding box of this BBH node and assign it to bbox
     //     -- You can get the bounding box of a surface using surf->bounds();
     //     -- To take the union of two boxes, look at Box2f::enclose()
-    put_your_code_here("Insert your BBH construction code here");
+    if (surfaces.size() == 0)
+        return;
+        
+    if (surfaces.size() > 0)
+    {
+        bbox = surfaces[0]->bounds();
+
+        for (uint32_t i = 1; i < surfaces.size(); ++i)
+        {
+            bbox.enclose(surfaces[i]->bounds());
+        }
+    }
+
+    int axis = (int)(randf() * 3);
+    auto comp = comparors[axis];
+
+    vector<shared_ptr<Surface>> left_surfaces;
+    vector<shared_ptr<Surface>> right_surfaces;
+
+    if (surfaces.size() == 1)
+    {
+        left_surfaces = right_surfaces = surfaces;
+
+        progress.step(1);
+    }
+    else if (surfaces.size() == 2)
+    {
+        if (comp(surfaces[0], surfaces[1]))
+        {
+            left_surfaces.push_back(surfaces[0]);
+            right_surfaces.push_back(surfaces[1]);
+        }
+        else
+        {
+            left_surfaces.push_back(surfaces[1]);
+            right_surfaces.push_back(surfaces[0]);
+        }
+
+        progress.step(2);
+    }
+    else
+    {
+        std::sort(surfaces.begin(), surfaces.end(), comp);
+
+        int mid = surfaces.size() / 2;
+        left_surfaces.assign(surfaces.begin(), surfaces.begin() + mid);
+        right_surfaces.assign(surfaces.begin() + mid, surfaces.end());
+
+        if (surfaces.size() == 3)
+        {
+            progress.step(1);
+        }
+    }
+
+    if (left_surfaces.size() == 1)
+    {
+        auto left_leaf = make_shared<BBHLeaf>();
+        left_leaf->surfaces = left_surfaces;
+        left_child = left_leaf;
+    }
+    else
+    {
+        left_child = make_shared<BBHNode>(left_surfaces, progress, depth + 1);
+    }
+
+    if (right_surfaces.size() == 1)
+    {
+        auto right_leaf = make_shared<BBHLeaf>();
+        right_leaf->surfaces = right_surfaces;
+        right_child = right_leaf;
+    }
+    else
+    {
+        right_child = make_shared<BBHNode>(right_surfaces, progress, depth + 1);
+    }
 }
 
 
@@ -135,8 +232,26 @@ bool BBHNode::intersect(const Ray3f &ray_, HitInfo &hit) const
 {
     ++bbh_nodes_visited;
     // TODO: Implement BBH intersection, following chapter 2 of the book.
-    put_your_code_here("Insert your BBH intersection code here");
-    return false;
+    if (!bbox.intersect(ray_))
+        return false;
+    
+    Ray3f tray(ray_);
+    bool hit_left = false;
+    bool hit_right = false;
+    if (left_child)
+    {
+        hit_left = left_child->intersect(tray, hit);
+    }
+    if (hit_left)
+    {
+        tray.maxt = hit.t;
+    }
+    if (right_child)
+    {
+        hit_right = right_child->intersect(tray, hit);
+    }
+
+    return hit_left || hit_right;
 }
 
 BBH::BBH(const json &j) : SurfaceGroup(j)
@@ -180,14 +295,9 @@ bool BBH::intersect(const Ray3f &ray_, HitInfo &hit) const
     if (!root)
         return false;
 
-    // transform the ray
-    auto ray           = m_xform.inverse().ray(ray_);
+    auto ray           =ray_;
     bool hit_something = root->intersect(ray, hit);
 
-    // transform the hit information back
-    hit.p = m_xform.point(hit.p);
-    hit.gn = normalize(m_xform.normal(hit.gn));
-    hit.sn = normalize(m_xform.normal(hit.sn));
     return hit_something;
 }
 
