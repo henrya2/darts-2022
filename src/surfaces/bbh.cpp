@@ -15,6 +15,12 @@
 
 struct BBHNode;
 
+
+namespace
+{
+    int g_max_leaf_size = 4;
+}
+
 // STAT_MEMORY_COUNTER("Memory/BBH", treeBytes);
 STAT_RATIO("BBH/Surfaces per leaf node", total_surfaces, total_leaf_nodes);
 STAT_COUNTER("BBH/Interior nodes", interior_nodes);
@@ -271,9 +277,7 @@ BBHNode_SplitMethodTemplated<method>::BBHNode_SplitMethodTemplated(vector<shared
 
     if (surfaces.size() == 1)
     {
-        left_surfaces = right_surfaces = surfaces;
-
-        progress.step(1);
+        left_surfaces = surfaces;
     }
     else if (surfaces.size() == 2)
     {
@@ -287,40 +291,43 @@ BBHNode_SplitMethodTemplated<method>::BBHNode_SplitMethodTemplated(vector<shared
             left_surfaces.push_back(surfaces[1]);
             right_surfaces.push_back(surfaces[0]);
         }
-
-        progress.step(2);
     }
     else
     {
         split_nodes<method>(surfaces, bbox, axis, left_surfaces, right_surfaces);
+    }
 
-        if (surfaces.size() == 3)
+    if (left_surfaces.size() > 0)
+    {
+        if (left_surfaces.size() <= g_max_leaf_size)
         {
-            progress.step(1);
+            auto left_leaf      = make_shared<BBHLeaf>();
+            left_leaf->surfaces = left_surfaces;
+            left_child          = left_leaf;
+
+            progress.step(left_surfaces.size());
+        }
+        else
+        {
+            left_child = make_shared<BBHNode_SplitMethodTemplated<method>>(left_surfaces, progress, depth + 1);
         }
     }
 
-    if (left_surfaces.size() == 1)
+    if (right_surfaces.size() > 0)
     {
-        auto left_leaf = make_shared<BBHLeaf>();
-        left_leaf->surfaces = left_surfaces;
-        left_child = left_leaf;
-    }
-    else
-    {
-        left_child = make_shared<BBHNode_SplitMethodTemplated<method>>(left_surfaces, progress, depth + 1);
-    }
+        if (right_surfaces.size() <= g_max_leaf_size)
+        {
+            auto right_leaf      = make_shared<BBHLeaf>();
+            right_leaf->surfaces = right_surfaces;
+            right_child          = right_leaf;
 
-    if (right_surfaces.size() == 1)
-    {
-        auto right_leaf = make_shared<BBHLeaf>();
-        right_leaf->surfaces = right_surfaces;
-        right_child = right_leaf;
+            progress.step(right_surfaces.size());
+        }
+        else
+        {
+            right_child = make_shared<BBHNode_SplitMethodTemplated<method>>(right_surfaces, progress, depth + 1);
+        }
     }
-    else
-    {
-        right_child = make_shared<BBHNode_SplitMethodTemplated<method>>(right_surfaces, progress, depth + 1);
-    }    
 }
 
 BBH::BBH(const json &j) : SurfaceGroup(j)
