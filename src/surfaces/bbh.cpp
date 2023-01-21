@@ -111,15 +111,25 @@ struct BBHNode_SplitMethodTemplated : public BBHNode
 
 namespace
 {
-    bool box_compare(const shared_ptr<Surface>& op1, const shared_ptr<Surface>& op2, int axis)
+    bool surface_compare(const shared_ptr<Surface>& op1, const shared_ptr<Surface>& op2, int axis)
     {
         return op1->bounds().center()[axis] < op2->bounds().center()[axis];
     }
 
     std::function<bool(const shared_ptr<Surface>& op1, const shared_ptr<Surface>& op2)> comparors[] = {
-        std::bind(box_compare, std::placeholders::_1, std::placeholders::_2, 0), 
-        std::bind(box_compare, std::placeholders::_1, std::placeholders::_2, 1), 
-        std::bind(box_compare, std::placeholders::_1, std::placeholders::_2, 2)};
+        std::bind(surface_compare, std::placeholders::_1, std::placeholders::_2, 0), 
+        std::bind(surface_compare, std::placeholders::_1, std::placeholders::_2, 1), 
+        std::bind(surface_compare, std::placeholders::_1, std::placeholders::_2, 2)};
+
+    bool surface_box_compare(const shared_ptr<Surface>& op1, const Box3f& box2, int axis)
+    {
+        return op1->bounds().center()[axis] < box2.center()[axis];
+    }
+
+    std::function<bool(const shared_ptr<Surface>& op1, const Box3f& box2)> surface_box_comparors[] = {
+        std::bind(surface_box_compare, std::placeholders::_1, std::placeholders::_2, 0), 
+        std::bind(surface_box_compare, std::placeholders::_1, std::placeholders::_2, 1), 
+        std::bind(surface_box_compare, std::placeholders::_1, std::placeholders::_2, 2)};
 
     int choose_bbox_max_axis(const Box3f& bbox)
     {
@@ -141,31 +151,38 @@ namespace
     }
 
     template<BBH_SplitMethod method>
-    void split_nodes(vector<shared_ptr<Surface>>& input_surfaces, vector<shared_ptr<Surface>>& left_surfaces, vector<shared_ptr<Surface>>& right_surfaces);
+    void split_nodes(vector<shared_ptr<Surface>>& input_surfaces, const Box3f& bbox, int axis, vector<shared_ptr<Surface>>& left_surfaces, vector<shared_ptr<Surface>>& right_surfaces);
 
     template<>
-    void split_nodes<BBH_SplitMethod::Equal>(vector<shared_ptr<Surface>>& input_surfaces, vector<shared_ptr<Surface>>& left_surfaces, vector<shared_ptr<Surface>>& right_surfaces)
+    void split_nodes<BBH_SplitMethod::Equal>(vector<shared_ptr<Surface>>& input_surfaces, const Box3f& bbox, int axis, vector<shared_ptr<Surface>>& left_surfaces, vector<shared_ptr<Surface>>& right_surfaces)
     {
+        auto comp = comparors[axis];
+
         int mid = input_surfaces.size() / 2;
-        std::nth_element(input_surfaces.begin(), input_surfaces.begin() + mid, input_surfaces.end());
+        std::nth_element(input_surfaces.begin(), input_surfaces.begin() + mid, input_surfaces.end(), comp);
         left_surfaces.assign(input_surfaces.begin(), input_surfaces.begin() + mid);
         right_surfaces.assign(input_surfaces.begin() + mid, input_surfaces.end());
     }
 
     template<>
-    void split_nodes<BBH_SplitMethod::Middle>(vector<shared_ptr<Surface>>& input_surfaces, vector<shared_ptr<Surface>>& left_surfaces, vector<shared_ptr<Surface>>& right_surfaces)
+    void split_nodes<BBH_SplitMethod::Middle>(vector<shared_ptr<Surface>>& input_surfaces, const Box3f& bbox, int axis, vector<shared_ptr<Surface>>& left_surfaces, vector<shared_ptr<Surface>>& right_surfaces)
     {
-        int mid = input_surfaces.size() / 2;
-        std::nth_element(input_surfaces.begin(), input_surfaces.begin() + mid, input_surfaces.end());
-        left_surfaces.assign(input_surfaces.begin(), input_surfaces.begin() + mid);
-        right_surfaces.assign(input_surfaces.begin() + mid, input_surfaces.end());
+        auto comp_o = surface_box_comparors[axis];
+        auto comp = std::bind(comp_o, std::placeholders::_1, std::cref(bbox));
+
+        auto iter_split = std::partition(input_surfaces.begin(), input_surfaces.end(), comp);
+
+        left_surfaces.assign(input_surfaces.begin(), iter_split);
+        right_surfaces.assign(iter_split, input_surfaces.end());
     }
 
     template<>
-    void split_nodes<BBH_SplitMethod::SAH>(vector<shared_ptr<Surface>>& input_surfaces, vector<shared_ptr<Surface>>& left_surfaces, vector<shared_ptr<Surface>>& right_surfaces)
+    void split_nodes<BBH_SplitMethod::SAH>(vector<shared_ptr<Surface>>& input_surfaces, const Box3f& bbox, int axis, vector<shared_ptr<Surface>>& left_surfaces, vector<shared_ptr<Surface>>& right_surfaces)
     {
+        auto comp = comparors[axis];
+
         int mid = input_surfaces.size() / 2;
-        std::nth_element(input_surfaces.begin(), input_surfaces.begin() + mid, input_surfaces.end());
+        std::nth_element(input_surfaces.begin(), input_surfaces.begin() + mid, input_surfaces.end(), comp);
         left_surfaces.assign(input_surfaces.begin(), input_surfaces.begin() + mid);
         right_surfaces.assign(input_surfaces.begin() + mid, input_surfaces.end());
     }
@@ -275,7 +292,7 @@ BBHNode_SplitMethodTemplated<method>::BBHNode_SplitMethodTemplated(vector<shared
     }
     else
     {
-        split_nodes<method>(surfaces, left_surfaces, right_surfaces);
+        split_nodes<method>(surfaces, bbox, axis, left_surfaces, right_surfaces);
 
         if (surfaces.size() == 3)
         {
