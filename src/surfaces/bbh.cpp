@@ -13,12 +13,17 @@
 
 #include <functional>
 
-struct BBHNode;
+#include <nanothread/nanothread.h>
 
+namespace dr = drjit;
+
+struct BBHNode;
 
 namespace
 {
     int g_max_leaf_size = 4;
+
+    int parallel_depth_threshold = 4;
 }
 
 // STAT_MEMORY_COUNTER("Memory/BBH", treeBytes);
@@ -218,6 +223,26 @@ namespace
         left_surfaces.assign(input_surfaces.begin(), input_surfaces.begin() + mid);
         right_surfaces.assign(input_surfaces.begin() + mid, input_surfaces.end());
     }
+
+    template<BBH_SplitMethod method>
+    void build_node(const vector<shared_ptr<Surface>>& surfaces, Progress& progress, int depth, shared_ptr<Surface>& out_node)
+    {
+        if (surfaces.size() > 0)
+        {
+            if (surfaces.size() <= g_max_leaf_size)
+            {
+                auto leaf_node      = make_shared<BBHLeaf>();
+                leaf_node->surfaces = surfaces;
+                out_node          = leaf_node;
+
+                progress.step(surfaces.size());
+            }
+            else
+            {
+                out_node = make_shared<BBHNode_SplitMethodTemplated<method>>(surfaces, progress, depth + 1);
+            }
+        }
+    }
 }
 
 BBHNode::BBHNode(vector<shared_ptr<Surface>> surfaces, Progress &progress, int depth)
@@ -323,36 +348,26 @@ BBHNode_SplitMethodTemplated<method>::BBHNode_SplitMethodTemplated(vector<shared
         split_nodes<method>(surfaces, bbox, axis, left_surfaces, right_surfaces);
     }
 
-    if (left_surfaces.size() > 0)
-    {
-        if (left_surfaces.size() <= g_max_leaf_size)
-        {
-            auto left_leaf      = make_shared<BBHLeaf>();
-            left_leaf->surfaces = left_surfaces;
-            left_child          = left_leaf;
+    auto build_left = std::bind(build_node<method>, std::cref(left_surfaces), std::ref(progress), depth, std::ref(left_child));
+    auto build_right = std::bind(build_node<method>, std::cref(right_surfaces), std::ref(progress), depth, std::ref(right_child));
 
-            progress.step(left_surfaces.size());
-        }
-        else
-        {
-            left_child = make_shared<BBHNode_SplitMethodTemplated<method>>(left_surfaces, progress, depth + 1);
-        }
+    decltype(build_left) build_funcs[] = {build_left, build_right};
+
+    if (depth < parallel_depth_threshold || depth % 2 == 0)
+    {
+        dr::parallel_for(dr::blocked_range<uint32_t>(0, 2, 1),
+                         [build_funcs](dr::blocked_range<uint32_t> range)
+                         {
+                             for (uint32_t i = range.begin(); i != range.end(); ++i)
+                             {
+                                 build_funcs[i]();
+                             }
+                         });
     }
-
-    if (right_surfaces.size() > 0)
+    else
     {
-        if (right_surfaces.size() <= g_max_leaf_size)
-        {
-            auto right_leaf      = make_shared<BBHLeaf>();
-            right_leaf->surfaces = right_surfaces;
-            right_child          = right_leaf;
-
-            progress.step(right_surfaces.size());
-        }
-        else
-        {
-            right_child = make_shared<BBHNode_SplitMethodTemplated<method>>(right_surfaces, progress, depth + 1);
-        }
+        build_funcs[0]();
+        build_funcs[1]();
     }
 }
 
