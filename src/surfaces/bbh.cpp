@@ -21,16 +21,18 @@ STAT_COUNTER("BBH/Interior nodes", interior_nodes);
 STAT_COUNTER("BBH/Leaf nodes", leaf_nodes);
 STAT_RATIO("BBH/Nodes visited per ray", bbh_nodes_visited, total_rays);
 
+enum class BBH_SplitMethod : uint8_t
+{
+    SAH,
+    Middle,
+    Equal
+};
+
 /// An axis-aligned bounding box hierarchy acceleration structure. \ingroup Surfaces
 struct BBH : public SurfaceGroup
 {
     shared_ptr<BBHNode> root;
-    enum class SplitMethod
-    {
-        SAH,
-        Middle,
-        Equal
-    } split_method    = SplitMethod::Middle;
+    BBH_SplitMethod split_method    = BBH_SplitMethod::Middle;
     int max_leaf_size = 1;
 
     BBH(const json &j = json::object());
@@ -101,6 +103,12 @@ struct BBHNode : public Surface
     }
 };
 
+template<BBH_SplitMethod method>
+struct BBHNode_SplitMethodTemplated : public BBHNode
+{
+    BBHNode_SplitMethodTemplated(vector<shared_ptr<Surface>> surfaces, Progress &progress, int depth = 0);
+};
+
 namespace
 {
     bool box_compare(const shared_ptr<Surface>& op1, const shared_ptr<Surface>& op2, int axis)
@@ -113,12 +121,53 @@ namespace
         std::bind(box_compare, std::placeholders::_1, std::placeholders::_2, 1), 
         std::bind(box_compare, std::placeholders::_1, std::placeholders::_2, 2)};
 
-    void compute_surfaces_bound(Box3f& bbox, const vector<shared_ptr<Surface>>& surfaces)
+    int choose_bbox_max_axis(const Box3f& bbox)
     {
-        for (auto surface : surfaces)
+        Vec3f box_size = bbox.diagonal();
+        float max_comp = std::max({box_size.x, box_size.y, box_size.z});
+
+        if (max_comp == box_size.x)
         {
-            bbox.enclose(surface->bounds());
+            return 0;
         }
+        else if (max_comp == box_size.y)
+        {
+            return 1;
+        }
+        else 
+        {
+            return 2;
+        }
+    }
+
+    template<BBH_SplitMethod method>
+    void split_nodes(vector<shared_ptr<Surface>>& input_surfaces, vector<shared_ptr<Surface>>& left_surfaces, vector<shared_ptr<Surface>>& right_surfaces);
+
+    template<>
+    void split_nodes<BBH_SplitMethod::Equal>(vector<shared_ptr<Surface>>& input_surfaces, vector<shared_ptr<Surface>>& left_surfaces, vector<shared_ptr<Surface>>& right_surfaces)
+    {
+        int mid = input_surfaces.size() / 2;
+        std::nth_element(input_surfaces.begin(), input_surfaces.begin() + mid, input_surfaces.end());
+        left_surfaces.assign(input_surfaces.begin(), input_surfaces.begin() + mid);
+        right_surfaces.assign(input_surfaces.begin() + mid, input_surfaces.end());
+    }
+
+    template<>
+    void split_nodes<BBH_SplitMethod::Middle>(vector<shared_ptr<Surface>>& input_surfaces, vector<shared_ptr<Surface>>& left_surfaces, vector<shared_ptr<Surface>>& right_surfaces)
+    {
+        int mid = input_surfaces.size() / 2;
+        std::nth_element(input_surfaces.begin(), input_surfaces.begin() + mid, input_surfaces.end());
+        left_surfaces.assign(input_surfaces.begin(), input_surfaces.begin() + mid);
+        right_surfaces.assign(input_surfaces.begin() + mid, input_surfaces.end());
+    }
+
+    template<>
+    void split_nodes<BBH_SplitMethod::SAH>(vector<shared_ptr<Surface>>& input_surfaces, vector<shared_ptr<Surface>>& left_surfaces, vector<shared_ptr<Surface>>& right_surfaces)
+    {
+        int mid = input_surfaces.size() / 2;
+        std::nth_element(input_surfaces.begin(), input_surfaces.begin() + mid, input_surfaces.end());
+        left_surfaces.assign(input_surfaces.begin(), input_surfaces.begin() + mid);
+        right_surfaces.assign(input_surfaces.begin() + mid, input_surfaces.end());
     }
 }
 
@@ -146,81 +195,6 @@ BBHNode::BBHNode(vector<shared_ptr<Surface>> surfaces, Progress &progress, int d
     //     -- After construction, you need to compute the bounding box of this BBH node and assign it to bbox
     //     -- You can get the bounding box of a surface using surf->bounds();
     //     -- To take the union of two boxes, look at Box2f::enclose()
-    if (surfaces.size() == 0)
-        return;
-        
-    if (surfaces.size() > 0)
-    {
-        bbox = surfaces[0]->bounds();
-
-        for (uint32_t i = 1; i < surfaces.size(); ++i)
-        {
-            bbox.enclose(surfaces[i]->bounds());
-        }
-    }
-
-    int axis = (int)(randf() * 3);
-    auto comp = comparors[axis];
-
-    vector<shared_ptr<Surface>> left_surfaces;
-    vector<shared_ptr<Surface>> right_surfaces;
-
-    if (surfaces.size() == 1)
-    {
-        left_surfaces = right_surfaces = surfaces;
-
-        progress.step(1);
-    }
-    else if (surfaces.size() == 2)
-    {
-        if (comp(surfaces[0], surfaces[1]))
-        {
-            left_surfaces.push_back(surfaces[0]);
-            right_surfaces.push_back(surfaces[1]);
-        }
-        else
-        {
-            left_surfaces.push_back(surfaces[1]);
-            right_surfaces.push_back(surfaces[0]);
-        }
-
-        progress.step(2);
-    }
-    else
-    {
-        std::sort(surfaces.begin(), surfaces.end(), comp);
-
-        int mid = surfaces.size() / 2;
-        left_surfaces.assign(surfaces.begin(), surfaces.begin() + mid);
-        right_surfaces.assign(surfaces.begin() + mid, surfaces.end());
-
-        if (surfaces.size() == 3)
-        {
-            progress.step(1);
-        }
-    }
-
-    if (left_surfaces.size() == 1)
-    {
-        auto left_leaf = make_shared<BBHLeaf>();
-        left_leaf->surfaces = left_surfaces;
-        left_child = left_leaf;
-    }
-    else
-    {
-        left_child = make_shared<BBHNode>(left_surfaces, progress, depth + 1);
-    }
-
-    if (right_surfaces.size() == 1)
-    {
-        auto right_leaf = make_shared<BBHLeaf>();
-        right_leaf->surfaces = right_surfaces;
-        right_child = right_leaf;
-    }
-    else
-    {
-        right_child = make_shared<BBHNode>(right_surfaces, progress, depth + 1);
-    }
 }
 
 
@@ -254,6 +228,84 @@ bool BBHNode::intersect(const Ray3f &ray_, HitInfo &hit) const
     return hit_left || hit_right;
 }
 
+template <BBH_SplitMethod method>
+BBHNode_SplitMethodTemplated<method>::BBHNode_SplitMethodTemplated(vector<shared_ptr<Surface>> surfaces,
+                                                                   Progress &progress, int depth)
+    : BBHNode(surfaces, progress, depth)
+{
+    if (surfaces.size() == 0)
+        return;
+
+    if (surfaces.size() > 0)
+    {
+        bbox = surfaces[0]->bounds();
+
+        for (uint32_t i = 1; i < surfaces.size(); ++i)
+        {
+            bbox.enclose(surfaces[i]->bounds());
+        }
+    }
+
+    int axis = choose_bbox_max_axis(bbox);
+    auto comp = comparors[axis];
+
+    vector<shared_ptr<Surface>> left_surfaces;
+    vector<shared_ptr<Surface>> right_surfaces;
+
+    if (surfaces.size() == 1)
+    {
+        left_surfaces = right_surfaces = surfaces;
+
+        progress.step(1);
+    }
+    else if (surfaces.size() == 2)
+    {
+        if (comp(surfaces[0], surfaces[1]))
+        {
+            left_surfaces.push_back(surfaces[0]);
+            right_surfaces.push_back(surfaces[1]);
+        }
+        else
+        {
+            left_surfaces.push_back(surfaces[1]);
+            right_surfaces.push_back(surfaces[0]);
+        }
+
+        progress.step(2);
+    }
+    else
+    {
+        split_nodes<method>(surfaces, left_surfaces, right_surfaces);
+
+        if (surfaces.size() == 3)
+        {
+            progress.step(1);
+        }
+    }
+
+    if (left_surfaces.size() == 1)
+    {
+        auto left_leaf = make_shared<BBHLeaf>();
+        left_leaf->surfaces = left_surfaces;
+        left_child = left_leaf;
+    }
+    else
+    {
+        left_child = make_shared<BBHNode_SplitMethodTemplated<method>>(left_surfaces, progress, depth + 1);
+    }
+
+    if (right_surfaces.size() == 1)
+    {
+        auto right_leaf = make_shared<BBHLeaf>();
+        right_leaf->surfaces = right_surfaces;
+        right_child = right_leaf;
+    }
+    else
+    {
+        right_child = make_shared<BBHNode_SplitMethodTemplated<method>>(right_surfaces, progress, depth + 1);
+    }    
+}
+
 BBH::BBH(const json &j) : SurfaceGroup(j)
 {
     // These values aren't used in the base code right now - but you can use these for when you want to extend the basic
@@ -264,17 +316,17 @@ BBH::BBH(const json &j) : SurfaceGroup(j)
     string sm = j.value("split_method", "equal");
     if (sm == "sah")
         // Surface-area heuristic
-        split_method = SplitMethod::SAH;
+        split_method = BBH_SplitMethod::SAH;
     else if (sm == "middle")
         // Split at the center of the bounding box
-        split_method = SplitMethod::Middle;
+        split_method = BBH_SplitMethod::Middle;
     else if (sm == "equal")
         // Split so that an equal number of objects are on either side
-        split_method = SplitMethod::Equal;
+        split_method = BBH_SplitMethod::Equal;
     else
     {
         spdlog::error("Unrecognized split_method \"{}\". Using \"equal\" instead.", sm);
-        split_method = SplitMethod::Equal;
+        split_method = BBH_SplitMethod::Equal;
     }
 }
 
@@ -282,9 +334,24 @@ void BBH::build()
 {
     Progress progress("Building BBH", m_surfaces.size());
     if (!m_surfaces.empty())
-        root = make_shared<BBHNode>(m_surfaces, progress);
+    {
+        if (split_method == BBH_SplitMethod::SAH)
+        {
+            root = make_shared<BBHNode_SplitMethodTemplated<BBH_SplitMethod::SAH>>(m_surfaces, progress);
+        }
+        else if (split_method == BBH_SplitMethod::Middle)
+        {
+            root = make_shared<BBHNode_SplitMethodTemplated<BBH_SplitMethod::Middle>>(m_surfaces, progress);
+        }
+        else if (split_method == BBH_SplitMethod::Equal)
+        {
+            root = make_shared<BBHNode_SplitMethodTemplated<BBH_SplitMethod::Equal>>(m_surfaces, progress);
+        }
+    }
     else
+    {
         root = nullptr;
+    }
     progress.set_done();
     spdlog::info("BBH contains {} surfaces.", m_surfaces.size());
 }
