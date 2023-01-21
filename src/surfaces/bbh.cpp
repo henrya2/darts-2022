@@ -137,6 +137,9 @@ namespace
         std::bind(surface_box_compare, std::placeholders::_1, std::placeholders::_2, 1), 
         std::bind(surface_box_compare, std::placeholders::_1, std::placeholders::_2, 2)};
 
+    template<BBH_SplitMethod method>
+    int choose_bbox_axis(const Box3f& bbox, int depth);
+
     int choose_bbox_max_axis(const Box3f& bbox)
     {
         Vec3f box_size = bbox.diagonal();
@@ -155,6 +158,29 @@ namespace
             return 2;
         }
     }
+
+    int choose_axis_by_depth(int depth)
+    {
+        return depth % 3;
+    }
+
+    template<>
+    int choose_bbox_axis<BBH_SplitMethod::Equal>(const Box3f& bbox, int depth)
+    {
+        return choose_bbox_max_axis(bbox);
+    }
+
+    template<>
+    int choose_bbox_axis<BBH_SplitMethod::Middle>(const Box3f& bbox, int depth)
+    {
+        return choose_axis_by_depth(depth);
+    }
+
+    template<>
+    int choose_bbox_axis<BBH_SplitMethod::SAH>(const Box3f& bbox, int depth)
+    {
+        return choose_axis_by_depth(depth);
+    }    
 
     template<BBH_SplitMethod method>
     void split_nodes(vector<shared_ptr<Surface>>& input_surfaces, const Box3f& bbox, int axis, vector<shared_ptr<Surface>>& left_surfaces, vector<shared_ptr<Surface>>& right_surfaces);
@@ -269,7 +295,7 @@ BBHNode_SplitMethodTemplated<method>::BBHNode_SplitMethodTemplated(vector<shared
         }
     }
 
-    int axis = choose_bbox_max_axis(bbox);
+    int axis = choose_bbox_axis<method>(bbox, depth);
     auto comp = comparors[axis];
 
     vector<shared_ptr<Surface>> left_surfaces;
