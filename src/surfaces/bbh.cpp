@@ -380,8 +380,185 @@ BBHNode_SplitMethodTemplated<method>::BBHNode_SplitMethodTemplated(vector<shared
         build_funcs[1]();
     }
 #else
-    build_funcs[0];
-    build_funcs[1];
+    build_funcs[0]();
+    build_funcs[1]();
+#endif
+}
+
+template<>
+BBHNode_SplitMethodTemplated<BBH_SplitMethod::SAH>::BBHNode_SplitMethodTemplated(vector<shared_ptr<Surface>> surfaces,
+                                                                   Progress &progress, int depth)
+    : BBHNode(surfaces, progress, depth)
+{
+    if (surfaces.size() == 0)
+        return;
+
+    if (surfaces.size() > 0)
+    {
+        bbox = surfaces[0]->bounds();
+
+        for (uint32_t i = 1; i < surfaces.size(); ++i)
+        {
+            bbox.enclose(surfaces[i]->bounds());
+        }
+    }
+
+    int axis = choose_bbox_axis<BBH_SplitMethod::SAH>(bbox, depth);
+    auto comp = comparors[axis];
+
+    vector<shared_ptr<Surface>> left_surfaces;
+    vector<shared_ptr<Surface>> right_surfaces;
+
+    bool all_leaf_children = false;
+
+    if (surfaces.size() == 1)
+    {
+        left_surfaces = surfaces;
+        all_leaf_children = true;
+    }
+    else if (surfaces.size() == 2)
+    {
+        if (comp(surfaces[0], surfaces[1]))
+        {
+            left_surfaces.push_back(surfaces[0]);
+            right_surfaces.push_back(surfaces[1]);
+        }
+        else
+        {
+            left_surfaces.push_back(surfaces[1]);
+            right_surfaces.push_back(surfaces[0]);
+        }
+
+        all_leaf_children = true;
+    }
+    else
+    {
+        const int num_buckets = 12;
+        struct BucketInfo
+        {
+            int count = 0;
+            Box3f bbox;
+        };
+
+        BucketInfo buckets[num_buckets];
+
+        for (uint32_t i = 0; i < surfaces.size(); ++i)
+        {
+            int b_i = (int)(num_buckets *
+                bbox.offset(surfaces[i]->bounds().center())[axis]);
+            if (b_i >= num_buckets)
+                b_i = num_buckets - 1;
+            buckets[b_i].count++;
+            buckets[b_i].bbox.enclose(surfaces[i]->bounds());
+        }
+
+        float cost[num_buckets - 1];
+        for (int i = 0; i < num_buckets - 1; ++i)
+        {
+            Box3f bbox0, bbox1;
+            int count0 = 0, count1 = 0;
+            for (int j = 0; j <= i; ++j)
+            {
+                bbox0.enclose(buckets[j].bbox);
+                count0 += buckets[j].count;
+            }
+
+            for (int j = i + 1; j < num_buckets; ++j)
+            {
+                bbox1.enclose(buckets[j].bbox);
+                count1 += buckets[j].count;
+            }
+
+            cost[i] = .125f + 
+                (count0 * bbox0.area() + count1 * bbox1.area()) / bbox.area();
+        }
+
+        float min_cost = cost[0];
+        int min_cost_split_bucket = 0;
+        for (int i = 1; i < num_buckets - 1; ++i)
+        {
+            if (cost[i] < min_cost)
+            {
+                min_cost = cost[i];
+                min_cost_split_bucket = i;
+            }
+        }
+
+        float leaf_cost = surfaces.size();
+        if (surfaces.size() > g_max_leaf_size || min_cost < leaf_cost)
+        {
+            auto mid_iter = std::partition(surfaces.begin(), surfaces.end(),
+                [=, bbox = this->bbox](const shared_ptr<Surface>& surface)
+                {
+                    int b_i = (int)(num_buckets * bbox.offset(surface->bounds().center())[axis]);
+                    if (b_i >= num_buckets)
+                        b_i = num_buckets - 1;
+
+                    return b_i < min_cost_split_bucket;
+                }
+            );
+
+            if (mid_iter == surfaces.begin() || mid_iter == surfaces.end())
+            {
+                split_nodes<BBH_SplitMethod::Equal>(surfaces, bbox, axis, left_surfaces, right_surfaces);
+            }
+            else
+            {
+                left_surfaces.assign(surfaces.begin(), mid_iter);
+                right_surfaces.assign(mid_iter, surfaces.end());
+            }
+        }
+        else
+        {
+            left_surfaces = surfaces;
+            all_leaf_children = true;
+        }
+    }
+
+    auto create_node_func = [](const vector<shared_ptr<Surface>>& surfaces, Progress& progress, int depth, bool force_leaf_node, shared_ptr<Surface>& out_node)
+    {
+        if (surfaces.size() > 0)
+        {
+            if (surfaces.size() <= g_max_leaf_size || force_leaf_node)
+            {
+                auto leaf_node      = make_shared<BBHLeaf>();
+                leaf_node->surfaces = surfaces;
+                out_node          = leaf_node;
+
+                progress.step(surfaces.size());
+            }
+            else
+            {
+                out_node = make_shared<BBHNode_SplitMethodTemplated<BBH_SplitMethod::SAH>>(surfaces, progress, depth + 1);
+            }
+        }
+    };
+
+    auto create_node_left = std::bind(create_node_func, std::cref(left_surfaces), std::ref(progress), depth, all_leaf_children, std::ref(left_child));
+    auto create_node_right = std::bind(create_node_func, std::cref(right_surfaces), std::ref(progress), depth, all_leaf_children, std::ref(right_child));
+
+    decltype(create_node_left) build_funcs[] = {create_node_left, create_node_right};
+
+#if USE_NANONTHREAD_BUILD_BBH
+    if (depth % 2 == 0)
+    {
+        dr::parallel_for(dr::blocked_range<uint32_t>(0, 2, 1),
+                         [build_funcs](dr::blocked_range<uint32_t> range)
+                         {
+                             for (uint32_t i = range.begin(); i != range.end(); ++i)
+                             {
+                                 build_funcs[i]();
+                             }
+                         });
+    }
+    else
+    {
+        build_funcs[0]();
+        build_funcs[1]();
+    }
+#else
+    build_funcs[0]();
+    build_funcs[1]();
 #endif
 }
 
@@ -394,7 +571,7 @@ BBH::BBH(const json &j) : SurfaceGroup(j)
 
     g_max_leaf_size = max_leaf_size;
 
-    string sm = j.value("split_method", "equal");
+    string sm = j.value("split_method", "sah");
     if (sm == "sah")
         // Surface-area heuristic
         split_method = BBH_SplitMethod::SAH;

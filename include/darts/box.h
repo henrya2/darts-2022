@@ -104,6 +104,19 @@ struct Box
         return 2 * result;
     }
 
+    /// Calculate continuous position of a point relative to the box(0. to 1.)
+    Vec<N, T> offset(const Vec<N, T>& pos) const
+    {
+        Vec<N, T> result = pos - min;
+        for (int i = 0; i < N; ++i)
+        {
+            if (max[i] > min[i])
+                result[i] /= max[i] - min[i];
+        }
+
+        return result;
+    }
+
     /**
         Check whether a #Ray intersects this #Box
 
