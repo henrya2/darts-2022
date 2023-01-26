@@ -15,6 +15,8 @@
 
 #include <nanothread/nanothread.h>
 
+#define USE_NANONTHREAD_BUILD_BBH 1
+
 namespace dr = drjit;
 
 struct BBHNode;
@@ -353,6 +355,7 @@ BBHNode_SplitMethodTemplated<method>::BBHNode_SplitMethodTemplated(vector<shared
 
     decltype(build_left) build_funcs[] = {build_left, build_right};
 
+#if USE_NANONTHREAD_BUILD_BBH
     if (depth < parallel_depth_threshold || depth % 2 == 0)
     {
         dr::parallel_for(dr::blocked_range<uint32_t>(0, 2, 1),
@@ -369,6 +372,10 @@ BBHNode_SplitMethodTemplated<method>::BBHNode_SplitMethodTemplated(vector<shared
         build_funcs[0]();
         build_funcs[1]();
     }
+#else
+    build_funcs[0];
+    build_funcs[1];
+#endif
 }
 
 BBH::BBH(const json &j) : SurfaceGroup(j)
