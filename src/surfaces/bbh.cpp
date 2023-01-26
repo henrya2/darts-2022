@@ -23,7 +23,7 @@ struct BBHNode;
 
 namespace
 {
-    int g_max_leaf_size = 4;
+    int g_max_leaf_size = 1;
 
     int parallel_depth_threshold = 4;
 }
@@ -180,13 +180,13 @@ namespace
     template<>
     int choose_bbox_axis<BBH_SplitMethod::Middle>(const Box3f& bbox, int depth)
     {
-        return choose_axis_by_depth(depth);
+        return choose_bbox_max_axis(bbox);
     }
 
     template<>
     int choose_bbox_axis<BBH_SplitMethod::SAH>(const Box3f& bbox, int depth)
     {
-        return choose_axis_by_depth(depth);
+        return choose_bbox_max_axis(bbox);
     }    
 
     template<BBH_SplitMethod method>
@@ -211,8 +211,15 @@ namespace
 
         auto iter_split = std::partition(input_surfaces.begin(), input_surfaces.end(), comp);
 
-        left_surfaces.assign(input_surfaces.begin(), iter_split);
-        right_surfaces.assign(iter_split, input_surfaces.end());
+        if (iter_split == input_surfaces.begin() || iter_split == input_surfaces.end())
+        {
+            split_nodes<BBH_SplitMethod::Equal>(input_surfaces, bbox, axis, left_surfaces, right_surfaces);
+        }
+        else
+        {
+            left_surfaces.assign(input_surfaces.begin(), iter_split);
+            right_surfaces.assign(iter_split, input_surfaces.end());
+        }
     }
 
     template<>
@@ -384,6 +391,8 @@ BBH::BBH(const json &j) : SurfaceGroup(j)
     // BBH functionality
 
     max_leaf_size = j.value("max_leaf_size", max_leaf_size);
+
+    g_max_leaf_size = max_leaf_size;
 
     string sm = j.value("split_method", "equal");
     if (sm == "sah")
