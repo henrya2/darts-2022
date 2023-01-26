@@ -431,6 +431,10 @@ BBHNode_SplitMethodTemplated<BBH_SplitMethod::SAH>::BBHNode_SplitMethodTemplated
 
         all_leaf_children = true;
     }
+    else if (surfaces.size() <= 4)
+    {
+        split_nodes<BBH_SplitMethod::Equal>(surfaces, bbox, axis, left_surfaces, right_surfaces);
+    }
     else
     {
         const int num_buckets = 12;
