@@ -10,6 +10,11 @@
 #include <fstream>
 #include <spdlog/sinks/stdout_sinks.h>
 
+#include <nanothread/nanothread.h>
+
+namespace dr = drjit;
+
+#define USE_NANOTHREAD_RAY_TRACING 1
 
 STAT_RATIO("Integrator/Number of NaN pixel samples", num_NaN_samples, num_pixel_samples);
 
@@ -76,6 +81,11 @@ Color3f Scene::recursive_color(const Ray3f &ray, int depth) const
     // 		return background color (hint: look at background())
 }
 
+namespace
+{
+    const int32_t RAY_TRACE_BLOCK_SIZE = 32;
+}
+
 // raytrace an image
 Image3f Scene::raytrace() const
 {
@@ -83,7 +93,31 @@ Image3f Scene::raytrace() const
     auto image = Image3f(m_camera->resolution().x, m_camera->resolution().y);
 
     Progress progress("Rendering", image.length());
+
     // Generate a ray for each pixel in the ray image
+#if USE_NANOTHREAD_RAY_TRACING
+    dr::parallel_for(
+        dr::blocked_range<uint32_t>(/* begin = */ 0, /* end = */ image.width() * image.height(), /* block_size = */ RAY_TRACE_BLOCK_SIZE), 
+        [&, this, width = image.width(), height = image.height()](dr::blocked_range<uint32_t> brange)
+        {
+            for (uint32_t r = brange.begin(); r != brange.end(); ++r)
+            {
+                auto y = r / width;
+                auto x = r % width;
+
+                Color3f sum_color = Color3f(0.f);
+                for (auto i : range(m_num_samples))
+                {
+                    auto ray = m_camera->generate_ray(Vec2f(x + 0.5f + randf(), y + 0.5f + randf()));
+                    sum_color += recursive_color(ray, 0);
+                }
+
+                image(x, y) = sum_color / m_num_samples;
+                ++progress;
+            }
+        }
+    );
+#else
     for (auto y : range(image.height()))
     {
         for (auto x : range(image.width()))
@@ -99,6 +133,7 @@ Image3f Scene::raytrace() const
             ++progress;
         }
     }
+#endif
 
     // TODO: Render the image, similar to the tutorial
     // Pseudo-code:
