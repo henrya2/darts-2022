@@ -498,13 +498,13 @@ BBHNode_SplitMethodTemplated<BBH_SplitMethod::SAH>::BBHNode_SplitMethodTemplated
                     if (b_i >= num_buckets)
                         b_i = num_buckets - 1;
 
-                    return b_i < min_cost_split_bucket;
+                    return b_i <= min_cost_split_bucket;
                 }
             );
 
             if (mid_iter == surfaces.begin() || mid_iter == surfaces.end())
             {
-                split_nodes<BBH_SplitMethod::Equal>(surfaces, bbox, axis, left_surfaces, right_surfaces);
+                split_nodes<BBH_SplitMethod::Middle>(surfaces, bbox, axis, left_surfaces, right_surfaces);
             }
             else
             {
