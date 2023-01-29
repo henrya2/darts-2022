@@ -7,6 +7,7 @@
 #include <darts/factory.h>
 #include <darts/material.h>
 #include <darts/scene.h>
+#include <darts/texture.h>
 
 /// A perfectly diffuse (%Lambertian) material. \ingroup Materials
 class Lambertian : public Material
@@ -16,13 +17,12 @@ public:
 
     bool scatter(const Ray3f &ray, const HitInfo &hit, Color3f &attenuation, Ray3f &scattered) const override;
 
-
-    Color3f albedo = Color3f(0.8f); ///< The diffuse color (fraction of light that is reflected per color channel).
+    std::shared_ptr<class Texture> albedo;
 };
 
 Lambertian::Lambertian(const json &j) : Material(j)
 {
-    albedo = j.value("albedo", albedo);
+    albedo = DartsFactory<Texture>::create(j.at("albedo"));
 }
 
 bool Lambertian::scatter(const Ray3f &ray, const HitInfo &hit, Color3f &attenuation, Ray3f &scattered) const
@@ -41,7 +41,7 @@ bool Lambertian::scatter(const Ray3f &ray, const HitInfo &hit, Color3f &attenuat
     //       a sphere, not *in* the sphere (the text book gets this wrong)
     //       If you normalize the point, you can force it to be on the sphere always, so
     //       add normalize(random_in_unit_sphere()) to your shading normal
-    attenuation = albedo;
+    attenuation = albedo->value(ray.d, hit);
     Vec3f unit_sphere_p = normalize(random_in_unit_sphere());
     Vec3f target = hit.p + hit.sn + unit_sphere_p;
     Vec3f out_dir = target - hit.p;

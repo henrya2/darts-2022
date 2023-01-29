@@ -7,6 +7,7 @@
 #include <darts/factory.h>
 #include <darts/material.h>
 #include <darts/scene.h>
+#include <darts/texture.h>
 
 /// A metallic material that reflects light into the (potentially rough) mirror reflection direction.
 /// \ingroup Materials
@@ -18,13 +19,13 @@ public:
     bool scatter(const Ray3f &ray, const HitInfo &hit, Color3f &attenuation, Ray3f &scattered) const override;
 
 
-    Color3f albedo = Color3f(0.8f); ///< The reflective color (fraction of light that is reflected per color channel).
+    shared_ptr<Texture> albedo; ///< The reflective color (fraction of light that is reflected per color channel).
     float   roughness = 0.f; ///< A value between 0 and 1 indicating how smooth vs. rough the reflection should be.
 };
 
 Metal::Metal(const json &j) : Material(j)
 {
-    albedo    = j.value("albedo", albedo);
+    albedo    = DartsFactory<Texture>::create(j.at("albedo"));
     roughness = clamp(j.value("roughness", roughness), 0.f, 1.f);
 }
 
@@ -44,7 +45,7 @@ bool Metal::scatter(const Ray3f &ray, const HitInfo &hit, Color3f &attenuation, 
     //       direction and the shading normal point in different directions (i.e. their dot product is negative)
     Vec3f reflected = reflect(normalize(ray.d), hit.sn);
     scattered = Ray3f(hit.p, reflected + roughness * normalize(random_in_unit_sphere()));
-    attenuation = albedo;
+    attenuation = albedo->value(ray.d, hit);
     return (dot(scattered.d, hit.sn) > 0);
 }
 

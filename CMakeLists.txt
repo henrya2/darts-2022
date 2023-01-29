@@ -62,6 +62,7 @@ list(
   include/darts/surface_group.h
   include/darts/test.h
   include/darts/transform.h
+  include/darts/texture.h
   src/camera.cpp
   src/example_scenes.cpp
   src/parser.cpp
@@ -78,6 +79,8 @@ list(
   src/surfaces/surface_group.cpp
   src/tests/material_scatter_test.cpp
   src/tests/test.cpp
+  src/textures/texture.cpp
+  src/textures/constant_texture.cpp
   # The files below are included in the PA0 basecode
   include/darts/array2d.h
   include/darts/common.h

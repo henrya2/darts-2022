@@ -184,6 +184,32 @@ shared_ptr<T> DartsFactory<T>::create(const json &j)
     }
 }
 
+template <>
+inline shared_ptr<Texture> DartsFactory<Texture>::create(const json &j)
+{
+    if (j.is_object())
+    {
+        if (!j.contains("type") || !j["type"].is_string())
+            throw DartsException("Missing 'type' field in:\n{}", j.dump(4));
+
+        auto type = j.at("type").get<string>();
+
+        try
+        {
+            return BaseFactory::create_instance(type, j);
+        }
+        catch (const std::exception &e)
+        {
+            throw DartsException("Cannot create a '{}' here:\n{}.\n\t{}", type, j.dump(4), e.what());
+        }
+    }
+    else if (j.is_array() || j.is_number())
+    {
+        return BaseFactory::create_instance("constant", j);
+    }
+    
+    throw DartsException("Create texture failed in:\n{}", j.dump(4));
+}
 
 /**
     Macro for registering an object constructor with a #DartsFactory
