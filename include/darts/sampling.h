@@ -24,7 +24,7 @@
 /// Global random number generator that produces floats between <tt>[0,1)</tt>
 inline float randf()
 {
-    static pcg32 rng = pcg32();
+    static thread_local pcg32 rng = pcg32();
     return rng.nextFloat();
 }
 
