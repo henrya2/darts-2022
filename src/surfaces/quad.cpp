@@ -59,7 +59,7 @@ bool Quad::intersect(const Ray3f &ray, HitInfo &hit) const
     hit.mat         = m_material.get();
     // TODO: Compute proper UV coordinates
     // Keep in mind that in darts we consider the origin of uv texture space to be in the bottom-left corner
-    hit.uv = Vec2f{0.f, 0.f};
+    hit.uv = Vec2f{(p.x + m_size.x) / (m_size.x * 2), (p.y + m_size.y) / (m_size.y * 2)};
 
     ++num_quad_hits;
     return true;

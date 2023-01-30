@@ -7,6 +7,8 @@
 #include <darts/sphere.h>
 #include <darts/stats.h>
 
+#include <darts/spherical.h>
+
 bool solve_quadratic(float a, float b, float c, float* t0, float* t1)
 {
     double discrim = (double)b * (double)b - 4 * (double)a * (double)c;
@@ -79,11 +81,14 @@ bool Sphere::intersect(const Ray3f &ray, HitInfo &hit) const
     n.z /= z_a * z_a;
     n = normalize(n);
     */
-    Vec3f n = m_xform.normal(tray(t));
+    Vec3f spherical_pos = tray(t);
+    Vec3f n = m_xform.normal(spherical_pos);
+
+    Vec2f phi_theta = Spherical::direction_to_spherical_coordinates(spherical_pos);
 
     // For this assignment you can leave these two values as is
     Vec3f shading_normal = n;
-    Vec2f uv             = Vec2f(0.0f, 0.0f);
+    Vec2f uv             = Vec2f(phi_theta.x / (2 * M_PI), phi_theta.y / M_PI);
 
     // You should only assign hit and return true if you successfully hit something
     hit.t   = t;
