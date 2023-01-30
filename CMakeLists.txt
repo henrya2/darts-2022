@@ -80,6 +80,7 @@ list(
   src/tests/material_scatter_test.cpp
   src/tests/test.cpp
   src/textures/texture.cpp
+  src/textures/checker_texture.cpp
   src/textures/constant_texture.cpp
   # The files below are included in the PA0 basecode
   include/darts/array2d.h
