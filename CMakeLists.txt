@@ -82,6 +82,7 @@ list(
   src/textures/texture.cpp
   src/textures/checker_texture.cpp
   src/textures/constant_texture.cpp
+  src/textures/noise_texture.cpp
   # The files below are included in the PA0 basecode
   include/darts/array2d.h
   include/darts/common.h
@@ -89,12 +90,14 @@ list(
   include/darts/image.h
   include/darts/math.h
   include/darts/parallel.h
+  include/darts/perlin.h
   include/darts/progress.h
   include/darts/ray.h
   include/darts/spherical.h
   src/common.cpp
   src/image.cpp
   src/math.cpp
+  src/perlin.cpp
   src/progress.cpp
   # cmake-format: on
 )

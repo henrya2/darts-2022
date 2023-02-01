@@ -28,6 +28,27 @@ inline float randf()
     return rng.nextFloat();
 }
 
+inline float randf(float min , float max)
+{
+    return min + (max - min) * randf();
+}
+
+// Returns a random integer in [min, max]
+inline int randi(int min, int max)
+{
+    return static_cast<int>(randf(min, max + 1));
+}
+
+inline Vec3f rand_vec3f(float min , float max)
+{
+    return Vec3f(randf(min, max), randf(min, max), randf(min, max));
+}
+
+inline Vec3f rand_unit_vec3f(float min, float max)
+{
+    return normalize(rand_vec3f(min, max));
+}
+
 /// Sample a random point uniformly within a unit sphere (uses the global randf() RNG and rejection sampling)
 inline Vec3f random_in_unit_sphere()
 {
