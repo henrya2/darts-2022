@@ -20,6 +20,8 @@ public:
 protected:
     shared_ptr<Texture> m_even_tex;
     shared_ptr<Texture> m_odd_tex;
+
+    float scale = 1.f;
 };
 
 CheckerTexture::CheckerTexture(const json &j)
@@ -27,11 +29,24 @@ CheckerTexture::CheckerTexture(const json &j)
 {
     m_even_tex = DartsFactory<Texture>::create(j.at("even"));
     m_odd_tex = DartsFactory<Texture>::create(j.at("odd"));
+
+    scale = j.value("scale", scale);
 }
 
 Color3f CheckerTexture::value(const Vec3f &wi, const HitInfo &hit) const
 {
-    auto sines = std::sin(10 * hit.p.x) * std::sin(10 * hit.p.y) * std::sin(10 * hit.p.z);
+    Vec3f p = xform.point(hit.p * scale * 30);
+    int sum = ((int)std::floor(p.x)) + ((int)std::floor(p.y)) + ((int)std::floor(p.z));
+    if (sum % 2 == 0)
+    {
+        return m_even_tex->value(wi, hit);
+    }
+    else
+    {
+        return m_odd_tex->value(wi, hit);
+    }
+    /*
+    auto sum = std::sin(10 * p.x) * std::sin(10 * p.y) * std::sin(10 * p.z);
     if (sines < 0)
     {
         return m_odd_tex->value(wi, hit);
@@ -40,6 +55,7 @@ Color3f CheckerTexture::value(const Vec3f &wi, const HitInfo &hit) const
     {
         return m_even_tex->value(wi, hit);
     }
+    */
 }
 
 DARTS_REGISTER_CLASS_IN_FACTORY(Texture, CheckerTexture, "checker")
