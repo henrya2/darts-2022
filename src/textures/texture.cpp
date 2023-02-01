@@ -8,4 +8,8 @@
 
 Texture::Texture(const json &j)
 {
+    if (j.is_object())
+    {
+        xform = j.value("xform", xform);
+    }
 }

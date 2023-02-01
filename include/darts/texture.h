@@ -17,4 +17,7 @@ public:
     virtual ~Texture() = default;
 
     virtual Color3f value(const Vec3f &wi, const HitInfo &hit) const = 0;
+
+protected:
+    Transform xform;
 };

@@ -36,7 +36,8 @@ MarbleTexture::MarbleTexture(const json &j)
 
 Color3f MarbleTexture::value(const Vec3f &wi, const HitInfo &hit) const
 {
-    float alpha = 0.5f * (1.f + std::sin(scale * hit.p.z + 10 * perlin->turb(hit.p)));
+    Vec3f p = xform.point(hit.p);
+    float alpha = 0.5f * (1.f + std::sin(scale * p.z + 10 * perlin->turb(p)));
     return lerp(veins, base, alpha);
 }
 
