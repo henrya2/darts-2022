@@ -83,6 +83,7 @@ list(
   src/textures/checker_texture.cpp
   src/textures/constant_texture.cpp
   src/textures/noise_texture.cpp
+  src/textures/image_texture.cpp
   # The files below are included in the PA0 basecode
   include/darts/array2d.h
   include/darts/common.h
