@@ -88,7 +88,7 @@ bool Sphere::intersect(const Ray3f &ray, HitInfo &hit) const
 
     // For this assignment you can leave these two values as is
     Vec3f shading_normal = n;
-    Vec2f uv             = Vec2f(phi_theta.x / (2 * M_PI), phi_theta.y / M_PI);
+    Vec2f uv             = phi_theta * Vec2f{INV_TWOPI, INV_PI};
 
     // You should only assign hit and return true if you successfully hit something
     hit.t   = t;

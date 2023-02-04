@@ -183,7 +183,7 @@ bool single_triangle_intersect(const Ray3f &ray, const Vec3f &p0, const Vec3f &p
     hit.p   = ray(t);
     hit.gn  = gn;
     hit.sn  = sn;
-    hit.uv  = Vec2f(u, v);
+    hit.uv  = Vec2f(u, 1.f - v);
     hit.mat = material;
     ++num_tri_hits;
     return true;
