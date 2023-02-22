@@ -122,13 +122,17 @@ inline float sample_disk_pdf(const Vec2f &p)
 /// Uniformly sample a vector on the unit sphere with respect to solid angles
 inline Vec3f sample_sphere(const Vec2f &rv)
 {
-    return Vec3f{0.f}; // CHANGEME
+    auto phi = 2 * M_PI * rv.x;
+    auto cos_theta = 2 * rv.y - 1;
+    auto sin_theta = std::sqrt(1 - cos_theta * cos_theta);
+    auto [sin_phi, cos_phi] = Spherical::sincos(phi);
+    return Vec3f{cos_phi * sin_theta, sin_phi * sin_theta, cos_theta}; // CHANGEME
 }
 
 /// Probability density of #sample_sphere()
 inline float sample_sphere_pdf()
 {
-    return 0.f; // CHANGEME
+    return 1.f / (M_PI * 4); // CHANGEME
 }
 
 
@@ -139,38 +143,50 @@ inline float sample_sphere_pdf()
 /// Uniformly sample a vector on the unit hemisphere around the pole (0,0,1) with respect to solid angles
 inline Vec3f sample_hemisphere(const Vec2f &rv)
 {
-    return Vec3f{0.f}; // CHANGEME
+    auto phi = 2 * M_PI * rv.x;
+    auto cos_theta = rv.y;
+    auto sin_theta = std::sqrt(1 - cos_theta * cos_theta);
+    auto [sin_phi, cos_phi] = Spherical::sincos(phi);
+    return Vec3f{cos_phi * sin_theta, sin_phi * sin_theta, cos_theta}; // CHANGEME
 }
 
 /// Probability density of #sample_hemisphere()
 inline float sample_hemisphere_pdf(const Vec3f &v)
 {
-    return 0.f; // CHANGEME
+    return 1.f / (M_PI * 2); // CHANGEME
 }
 
 /// Uniformly sample a vector on the unit hemisphere around the pole (0,0,1) with respect to projected solid
 /// angles
 inline Vec3f sample_hemisphere_cosine(const Vec2f &rv)
 {
-    return Vec3f{0.f}; // CHANGEME
+    auto phi = 2 * M_PI * rv.x;
+    auto cos_theta = std::sqrt(rv.y);
+    auto sin_theta = std::sqrt(1 - cos_theta * cos_theta);
+    auto [sin_phi, cos_phi] = Spherical::sincos(phi);
+    return Vec3f{cos_phi * sin_theta, sin_phi * sin_theta, cos_theta}; // CHANGEME
 }
 
 /// Probability density of #sample_hemisphere_cosine()
 inline float sample_hemisphere_cosine_pdf(const Vec3f &v)
 {
-    return 0.f; // CHANGEME
+    return v.z / (M_PI); // CHANGEME
 }
 
 /// Sample a vector on the unit hemisphere with a cosine-power density about the pole (0,0,1)
 inline Vec3f sample_hemisphere_cosine_power(float exponent, const Vec2f &rv)
 {
-    return Vec3f{0.f}; // CHANGEME
+    auto phi = 2 * M_PI * rv.x;
+    auto cos_theta = std::pow(rv.y, 1.f / (exponent + 1));
+    auto sin_theta = std::sqrt(1 - cos_theta * cos_theta);
+    auto [sin_phi, cos_phi] = Spherical::sincos(phi);
+    return Vec3f{cos_phi * sin_theta, sin_phi * sin_theta, cos_theta}; // CHANGEME
 }
 
 /// Probability density of #sample_hemisphere_cosine_power()
 inline float sample_hemisphere_cosine_power_pdf(float exponent, float cosine)
 {
-    return 0.f; // CHANGEME
+    return  std::pow(cosine, 1.f / (exponent + 1)) / (M_PI); // CHANGEME
 }
 
 /** @}*/

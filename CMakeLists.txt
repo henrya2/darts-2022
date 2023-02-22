@@ -151,6 +151,9 @@ target_link_libraries(img_compare PRIVATE darts_lib)
 add_executable(img_avg src/img_avg.cpp)
 target_link_libraries(img_avg PRIVATE darts_lib)
 
+add_executable(point_gen src/point_gen.cpp)
+target_link_libraries(point_gen PRIVATE darts_lib)
+
 
 if(USE_NANOVDB)
   add_executable(nanovdb_test src/nanovdb_test.cpp)
