@@ -123,7 +123,7 @@ inline float sample_disk_pdf(const Vec2f &p)
 inline Vec3f sample_sphere(const Vec2f &rv)
 {
     auto phi = 2 * M_PI * rv.x;
-    auto cos_theta = 2 * rv.y - 1;
+    auto cos_theta = rv.y;
     auto sin_theta = std::sqrt(1 - cos_theta * cos_theta);
     auto [sin_phi, cos_phi] = Spherical::sincos(phi);
     return Vec3f{cos_phi * sin_theta, sin_phi * sin_theta, cos_theta}; // CHANGEME
