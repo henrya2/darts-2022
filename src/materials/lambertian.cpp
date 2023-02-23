@@ -8,6 +8,7 @@
 #include <darts/material.h>
 #include <darts/scene.h>
 #include <darts/texture.h>
+#include <darts/onb.h>
 
 /// A perfectly diffuse (%Lambertian) material. \ingroup Materials
 class Lambertian : public Material
@@ -16,6 +17,12 @@ public:
     Lambertian(const json &j = json::object());
 
     bool scatter(const Ray3f &ray, const HitInfo &hit, Color3f &attenuation, Ray3f &scattered) const override;
+
+    virtual bool sample(const Vec3f &wi, const HitInfo &hit, ScatterRecord &srec, const Vec2f &rv, float rv1) const override;
+
+    virtual Color3f eval(const Vec3f &wi, const Vec3f &scattered, const HitInfo &hit) const override;
+
+    virtual float pdf(const Vec3f &wi, const Vec3f &scattered, const HitInfo &hit) const override;
 
     std::shared_ptr<class Texture> albedo;
 };
@@ -51,6 +58,28 @@ bool Lambertian::scatter(const Ray3f &ray, const HitInfo &hit, Color3f &attenuat
     }
     scattered = Ray3f(hit.p, out_dir);
     return true;
+}
+
+bool Lambertian::sample(const Vec3f &wi, const HitInfo &hit, ScatterRecord &srec, const Vec2f &rv, float rv1) const
+{
+    srec.is_specular = false;
+
+    ONBf onb(hit.sn); 
+    srec.wo = onb.to_world(sample_hemisphere_cosine(rv));
+
+    srec.attenuation = albedo->value(wi, hit);
+
+    return true;
+}
+
+Color3f Lambertian::eval(const Vec3f &wi, const Vec3f &scattered, const HitInfo &hit) const
+{
+    return albedo->value(wi, hit) * std::max(0.f, dot(scattered, hit.sn)) / M_PI;
+}
+
+float Lambertian::pdf(const Vec3f &wi, const Vec3f &scattered, const HitInfo &hit) const
+{
+    return std::max(0.f, dot(scattered, hit.sn)) / M_PI;
 }
 
 

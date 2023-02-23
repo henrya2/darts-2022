@@ -37,6 +37,8 @@ list(
   # Additional files for PA5 below
   src/tests/surface_sample_test.cpp
   # Additional files for PA4 below
+  src/materials/blinn_phong.cpp
+  src/materials/phong.cpp
   src/samplers/independent.cpp
   include/darts/sampler.h
   src/tests/material_sample_test.cpp
@@ -54,6 +56,7 @@ list(
   include/darts/factory.h
   include/darts/json.h
   include/darts/material.h
+  include/darts/onb.h
   include/darts/sampling.h
   include/darts/scene.h
   include/darts/sphere.h
