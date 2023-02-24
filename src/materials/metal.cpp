@@ -17,7 +17,7 @@ public:
     Metal(const json &j = json::object());
 
     bool scatter(const Ray3f &ray, const HitInfo &hit, Color3f &attenuation, Ray3f &scattered) const override;
-
+    bool sample(const Vec3f &wi, const HitInfo &hit, ScatterRecord &srec, const Vec2f &rv, float rv1) const override;
 
     shared_ptr<Texture> albedo; ///< The reflective color (fraction of light that is reflected per color channel).
     float   roughness = 0.f; ///< A value between 0 and 1 indicating how smooth vs. rough the reflection should be.
@@ -49,6 +49,15 @@ bool Metal::scatter(const Ray3f &ray, const HitInfo &hit, Color3f &attenuation, 
     return (dot(scattered.d, hit.sn) > 0);
 }
 
+bool Metal::sample(const Vec3f &wi, const HitInfo &hit, ScatterRecord &srec, const Vec2f &rv, float rv1) const
+{
+    Vec3f reflected = reflect(normalize(wi), hit.sn);
+    srec.wo = reflected + roughness * normalize(random_in_unit_sphere());
+    srec.attenuation = albedo->value(wi, hit);
+    srec.is_specular = true;
+
+    return (dot(srec.wo, hit.sn) > 0);
+}
 
 DARTS_REGISTER_CLASS_IN_FACTORY(Material, Metal, "metal")
 

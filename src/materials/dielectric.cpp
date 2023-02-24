@@ -17,6 +17,8 @@ public:
 
     bool scatter(const Ray3f &ray, const HitInfo &hit, Color3f &attenuation, Ray3f &scattered) const override;
 
+    bool sample(const Vec3f &wi, const HitInfo &hit, ScatterRecord &srec, const Vec2f &rv, float rv1) const override;
+
 
     float ior; ///< The (relative) index of refraction of the material
 };
@@ -52,6 +54,32 @@ bool Dielectric::scatter(const Ray3f &ray, const HitInfo &hit, Color3f &attenuat
     return true;
 }
 
+bool Dielectric::sample(const Vec3f &wi, const HitInfo &hit, ScatterRecord &srec, const Vec2f &rv, float rv1) const
+{
+    srec.attenuation = Color3f(1.f, 1.f, 1.f);
+    float cos_theta_i = dot(normalize(-wi), hit.sn);
+    bool entering = cos_theta_i > 0.0f;
+    // Shading normal should be inverted while ray starts inward
+    Vec3f sn = entering ? hit.sn : -hit.sn;
+    float refraction_ratio = entering ? (1.f / ior) : ior;
+    float fr = fresnel_dielectric(cos_theta_i, 1.f, ior);
+
+    Vec3f refracted;
+
+    Vec3f scatter_dir;
+    if (fr > randf() || !refract(wi, sn, refraction_ratio, refracted))
+    {
+        scatter_dir = reflect(normalize(wi), sn);
+    }
+    else
+    {
+        scatter_dir = refracted;
+    }
+    srec.wo = normalize(scatter_dir);
+    srec.is_specular = true;
+    
+    return true;
+}
 
 DARTS_REGISTER_CLASS_IN_FACTORY(Material, Dielectric, "dielectric")
 
