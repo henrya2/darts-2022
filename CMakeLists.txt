@@ -40,7 +40,10 @@ list(
   src/materials/blinn_phong.cpp
   src/materials/phong.cpp
   src/samplers/independent.cpp
+  src/integrators/ambientocclusion.cpp
+  src/integrators/normals.cpp
   include/darts/sampler.h
+  include/darts/integrator.h
   src/tests/material_sample_test.cpp
   # Additional files for PA3 below
   # Additional files for PA2 below

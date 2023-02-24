@@ -50,6 +50,33 @@ void Scene::parse(const json &j)
         m_num_samples = j["sampler"]["samples"];
 
     //
+    // parse the sampler
+    //
+    if (j.contains("sampler"))
+    {
+        json j2 = j["sampler"];
+        if (!j2.contains("type"))
+        {
+            spdlog::warn("No sampler 'type' specified, assuming independent sampling.");
+            j2["type"] = "independent";
+        }
+        m_sampler = DartsFactory<Sampler>::create(j2);
+    }
+    else
+    {
+        spdlog::warn("No sampler specified, defaulting to 1 spp independent sampling.");
+        m_sampler = DartsFactory<Sampler>::create({{"type", "independent"}, {"samples", 1}});      
+    }
+
+    //
+    // integrator
+    //
+    if (j.contains("integrator"))
+    {
+        m_integrator = DartsFactory<Integrator>::create(j["integrator"]);
+    }
+
+    //
     // create the scene-wide acceleration structure so we can put other surfaces into it
     //
     if (j.contains("accelerator"))

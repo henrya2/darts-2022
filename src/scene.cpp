@@ -11,6 +11,7 @@
 #include <spdlog/sinks/stdout_sinks.h>
 
 #include <nanothread/nanothread.h>
+#include <map>
 
 namespace dr = drjit;
 
@@ -89,6 +90,8 @@ namespace
 // raytrace an image
 Image3f Scene::raytrace() const
 {
+    std::map<uint32_t, std::unique_ptr<Sampler>> thread_samplers;
+
     // allocate an image of the proper size
     auto image = Image3f(m_camera->resolution().x, m_camera->resolution().y);
 
@@ -100,16 +103,28 @@ Image3f Scene::raytrace() const
         dr::blocked_range<uint32_t>(/* begin = */ 0, /* end = */ image.width() * image.height(), /* block_size = */ RAY_TRACE_BLOCK_SIZE), 
         [&, this, width = image.width(), height = image.height()](dr::blocked_range<uint32_t> brange)
         {
+            auto& sampler = thread_samplers[pool_thread_id()];
+            if (!sampler)
+            {
+                sampler = m_sampler->clone();
+            }
             for (uint32_t r = brange.begin(); r != brange.end(); ++r)
             {
                 auto y = r / width;
                 auto x = r % width;
 
                 Color3f sum_color = Color3f(0.f);
-                for (auto i : range(m_num_samples))
+                for (auto i : range(sampler->sample_count()))
                 {
                     auto ray = m_camera->generate_ray(Vec2f(x + 0.5f + randf(), y + 0.5f + randf()));
-                    sum_color += recursive_color(ray, 0);
+                    if (m_integrator)
+                    {
+                        sum_color += m_integrator->Li(*this, *sampler.get(), ray);
+                    }
+                    else
+                    {
+                        sum_color += recursive_color(ray, 0);
+                    }
                 }
 
                 image(x, y) = sum_color / m_num_samples;
@@ -123,10 +138,17 @@ Image3f Scene::raytrace() const
         for (auto x : range(image.width()))
         {
             Color3f sum_color = Color3f(0.f);
-            for (auto i : range(m_num_samples))
+            for (auto i : range(m_sampler->sampler_count()))
             {
                 auto ray = m_camera->generate_ray(Vec2f(x + 0.5f + randf(), y + 0.5f + randf()));
-                sum_color += recursive_color(ray, 0);
+                if (m_integrator)
+                {
+                    sum_color += m_integrator->Li(*this, *m_sampler.get(), ray);
+                }
+                else
+                {
+                    sum_color += recursive_color(ray, 0);
+                }
             }
 
             image(x, y) = sum_color / m_num_samples;

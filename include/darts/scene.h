@@ -10,6 +10,8 @@
 #include <darts/factory.h>
 #include <darts/image.h>
 #include <darts/material.h>
+#include <darts/sampler.h>
+#include <darts/integrator.h>
 #include <darts/surface_group.h>
 
 /**
@@ -70,6 +72,10 @@ private:
     shared_ptr<SurfaceGroup> m_surfaces;
     Color3f m_background  = Color3f(0.2f);
     int     m_num_samples = 1;
+
+    shared_ptr<Sampler> m_sampler;
+
+    shared_ptr<Integrator> m_integrator;
 };
 
 /// create hard-coded test scenes that do not need to be loaded from a file
