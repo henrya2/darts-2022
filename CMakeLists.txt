@@ -42,6 +42,7 @@ list(
   src/samplers/independent.cpp
   src/integrators/ambientocclusion.cpp
   src/integrators/normals.cpp
+  src/integrators/path_tracer_mats.cpp
   include/darts/sampler.h
   include/darts/integrator.h
   src/tests/material_sample_test.cpp
