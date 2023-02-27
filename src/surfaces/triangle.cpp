@@ -8,6 +8,7 @@
 #include <darts/mesh.h>
 #include <darts/stats.h>
 #include <darts/triangle.h>
+#include <darts/sampling.h>
 
 
 Triangle::Triangle(const json &j) : m_face_idx(0)
@@ -211,6 +212,46 @@ Box3f Triangle::bounds() const
     return result;
 }
 
+Color3f Triangle::sample(EmitterRecord &rec, const Vec2f &rv) const
+{
+    auto iv0 = m_mesh->Fv[m_face_idx].x, iv1 = m_mesh->Fv[m_face_idx].y, iv2 = m_mesh->Fv[m_face_idx].z;
+    auto p0 = m_mesh->vs[iv0], p1 = m_mesh->vs[iv1], p2 = m_mesh->vs[iv2];
+
+    rec.hit.p = sample_triangle(p0, p1, p2, rv);
+    rec.wi = rec.hit.p - rec.o;
+    float dist2 = length2(rec.wi);
+    rec.hit.t = std::sqrt(dist2);
+    rec.hit.mat = m_mesh->materials[m_mesh->Fm[m_face_idx]].get();
+    rec.hit.gn = rec.hit.sn = normalize(cross(p1 - p0, p2 - p0));
+    rec.wi /= rec.hit.t; // normalize rec.wi
+
+    rec.emitter = this;
+
+    float area = length(cross(p1 - p0, p2 - p0)) / 2.f;
+    float cosine = std::abs(dot(rec.hit.gn, rec.wi));
+    rec.pdf = dist2 / (cosine * area);
+
+    return rec.hit.mat->emitted(Ray3f(rec.o, rec.wi), rec.hit) / rec.pdf;
+}
+
+float Triangle::pdf(const Vec3f &o, const Vec3f &v) const
+{
+    auto iv0 = m_mesh->Fv[m_face_idx].x, iv1 = m_mesh->Fv[m_face_idx].y, iv2 = m_mesh->Fv[m_face_idx].z;
+    auto p0 = m_mesh->vs[iv0], p1 = m_mesh->vs[iv1], p2 = m_mesh->vs[iv2];
+
+    HitInfo hit;
+    if (this->intersect(Ray3f(o, v), hit))
+    {
+        float area             = length(cross(p1 - p0, p2 - p0)) / 2.f;
+        float distance_squared = hit.t * hit.t * length2(v);
+        float cosine           = std::abs(dot(v, hit.gn) / length(v));
+        return distance_squared / (cosine * area);
+    }
+    else
+    {
+        return 0;
+    }
+}
 
 DARTS_REGISTER_CLASS_IN_FACTORY(Surface, Triangle, "triangle")
 

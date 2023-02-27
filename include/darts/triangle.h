@@ -21,6 +21,9 @@ public:
 
     Box3f bounds() const override;
 
+    Color3f sample(EmitterRecord &rec, const Vec2f &rv) const override;
+    float   pdf(const Vec3f &o, const Vec3f &v) const override;
+
 
     bool is_emissive() const override
     {

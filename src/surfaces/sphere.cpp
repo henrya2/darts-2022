@@ -8,6 +8,8 @@
 #include <darts/stats.h>
 
 #include <darts/spherical.h>
+#include <darts/onb.h>
+#include <darts/sampling.h>
 
 bool solve_quadratic(float a, float b, float c, float* t0, float* t1)
 {
@@ -106,7 +108,65 @@ Box3f Sphere::local_bounds() const
 {
     return Box3f{Vec3f{-m_radius}, Vec3f{m_radius}};
 }
+Color3f Sphere::sample(EmitterRecord &rec, const Vec2f &rv) const
+{
+    auto center = m_xform.m.w.xyz();
+    auto radius = length(m_xform.m.x.xyz()) * m_radius;
 
+    rec.emitter = this;
+
+    auto dist2 = length2(center - rec.o);
+    auto dist = sqrt(dist2);
+    if (dist2 <= 0 || (dist2 - radius * radius) <= 0)
+    {
+        rec.wi = sample_sphere(rv);
+        intersect(Ray3f(rec.o, rec.wi), rec.hit);
+        rec.pdf = sample_sphere_pdf();
+        return rec.hit.mat->emitted(Ray3f(rec.o, rec.wi), rec.hit) / rec.pdf;
+    }
+    
+    auto dir = (center - rec.o) / dist;
+    ONBf onb(dir);
+
+    auto cos_theta_max = sqrt(dist2 - radius * radius) / dist;
+    auto local_wi = sample_sphere_cap(rv, cos_theta_max);
+    rec.wi = onb.to_world(local_wi);
+    
+    if (!intersect(Ray3f(rec.o, rec.wi), rec.hit))
+        return Color3f(0, 0, 0);
+
+    rec.pdf = sample_sphere_cap_pdf(local_wi.z, cos_theta_max);
+
+    return rec.hit.mat->emitted(Ray3f(rec.o, rec.wi), rec.hit) / rec.pdf;
+}
+
+float Sphere::pdf(const Vec3f &o, const Vec3f &v) const
+{
+    HitInfo hit;
+    if (this->intersect(Ray3f(o, v), hit))
+    {
+        auto center = m_xform.m.w.xyz();
+        auto radius = length(m_xform.m.x.xyz()) * m_radius;
+
+        auto dist2 = length2(center - o);
+        auto dist = sqrt(dist2);
+
+        if (dist2 <= 0 || (dist2 - radius * radius) <= 0)
+        {
+            return sample_sphere_pdf();
+        }
+
+        auto dir = (center - o) / dist;
+
+        auto cos_theta_max = sqrt(dist2 - radius * radius) / dist;
+
+        return sample_sphere_cap_pdf(dot(dir, v) / length(v), cos_theta_max);
+    }
+    else
+    {
+        return 0;
+    }
+}
 
 DARTS_REGISTER_CLASS_IN_FACTORY(Surface, Sphere, "sphere")
 

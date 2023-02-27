@@ -81,6 +81,8 @@ Color3f Quad::sample(EmitterRecord &rec, const Vec2f &rv) const
     rec.hit.gn = rec.hit.sn = m_xform.normal({0, 0, 1});
     rec.wi /= rec.hit.t;
 
+    rec.emitter = this;
+
     // convert to solid angle measure
     float area   = 4 * length(cross(m_xform.vector({m_size.x, 0, 0}), m_xform.vector({0, m_size.y, 0})));
     float cosine = std::abs(dot(rec.hit.gn, rec.wi));

@@ -205,13 +205,17 @@ inline float sample_hemisphere_cosine_power_pdf(float exponent, float cosine)
  */
 inline Vec3f sample_sphere_cap(const Vec2f &rv, float cos_theta_max)
 {
-    return Vec3f{0.f}; // CHANGEME
+    auto phi = 2 * M_PI * rv.x;
+    auto cos_theta = lerp(cos_theta_max, 1.f, rv.y);
+    auto sin_theta = std::sqrt(1 - cos_theta * cos_theta);
+    auto [sin_phi, cos_phi] = Spherical::sincos(phi);
+    return Vec3f{cos_phi * sin_theta, sin_phi * sin_theta, cos_theta}; // CHANGEME
 }
 
 /// Probability density of #sample_sphere_cap()
 inline float sample_sphere_cap_pdf(float cos_theta, float cos_theta_max)
 {
-    return 0.f; // CHANGEME
+    return 1 / (2 * M_PI * (1 - cos_theta_max)); // CHANGEME
 }
 
 /** @}*/
@@ -228,13 +232,23 @@ inline float sample_sphere_cap_pdf(float cos_theta, float cos_theta_max)
 */
 inline Vec3f sample_triangle(const Vec3f &v0, const Vec3f &v1, const Vec3f &v2, const Vec2f &rv)
 {
-    return Vec3f{0.f}; // CHANGEME
+    float alpha = rv.x;
+    float beta = rv.y;
+    if (alpha + beta > 1)
+    {
+        alpha = 1 - alpha;
+        beta = 1 - beta;
+    }
+    float gamma = 1 - alpha - beta;
+
+    return alpha * v0 + beta * v1 + gamma * v2;
 }
 
 /// Sampling density of #sample_triangle()
 inline float sample_triangle_pdf(const Vec3f &v0, const Vec3f &v1, const Vec3f &v2)
 {
-    return 0.f; // CHANGEME
+    auto cross_vec = la::cross(v1 - v0, v2 - v0);
+    return 2 / la::length(cross_vec); // 1 / (1/2 * norm(cross_vec))
 }
 
 /** @}*/

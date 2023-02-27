@@ -6,6 +6,8 @@
 
 #include <darts/surface_group.h>
 
+#include <darts/sampling.h>
+
 SurfaceGroup::SurfaceGroup(const json &j) : XformedSurface(j)
 {
     //
@@ -58,6 +60,16 @@ bool SurfaceGroup::intersect(const Ray3f &ray_, HitInfo &hit) const
 Box3f SurfaceGroup::local_bounds() const
 {
     return m_bounds;
+}
+Color3f SurfaceGroup::sample(EmitterRecord &rec, const Vec2f &rv) const
+{
+    float rv1 = randf();
+    auto picked_child = sample_child(rv1);
+
+    auto child_color = picked_child.first->sample(rec, rv);
+    rec.pdf *= picked_child.second;
+
+    return child_color / picked_child.second;
 }
 
 pair<const Surface *, float> SurfaceGroup::sample_child(float &rv1) const
