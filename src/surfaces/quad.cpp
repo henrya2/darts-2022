@@ -14,7 +14,7 @@ public:
 
     bool intersect(const Ray3f &ray, HitInfo &hit) const override;
     Box3f local_bounds() const override;
-    Color3f sample(EmitterRecord &rec, const Vec2f &rv) const override;
+    Color3f sample(EmitterRecord &rec, const Vec2f &rv, float rv1) const override;
     float   pdf(const Vec3f &o, const Vec3f &v) const override;
 
 protected:
@@ -71,7 +71,7 @@ Box3f Quad::local_bounds() const
                  Vec3f{m_size.x, m_size.y, 0} + Vec3f{Ray3f::epsilon}};
 }
 
-Color3f Quad::sample(EmitterRecord &rec, const Vec2f &rv) const
+Color3f Quad::sample(EmitterRecord &rec, const Vec2f &rv, float rv1) const
 {
     rec.hit.p   = m_xform.point({(2 * rv.x - 1) * m_size.x, (2 * rv.y - 1) * m_size.y, 0});
     rec.wi      = rec.hit.p - rec.o;

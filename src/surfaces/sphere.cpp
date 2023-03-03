@@ -108,7 +108,7 @@ Box3f Sphere::local_bounds() const
 {
     return Box3f{Vec3f{-m_radius}, Vec3f{m_radius}};
 }
-Color3f Sphere::sample(EmitterRecord &rec, const Vec2f &rv) const
+Color3f Sphere::sample(EmitterRecord &rec, const Vec2f &rv, float rv1) const
 {
     auto center = m_xform.m.w.xyz();
     auto radius = length(m_xform.m.x.xyz()) * m_radius;

@@ -72,6 +72,11 @@ public:
         m_current_dimension = 0u;
     }
 
+    void reset_current_sample()
+    {
+        m_current_sample = 0;
+    }
+
     /// Advance to the next sample
     virtual void advance()
     {

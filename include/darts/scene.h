@@ -37,6 +37,10 @@ public:
     virtual void add_child(shared_ptr<Surface> surface) override
     {
         m_surfaces->add_child(surface);
+        if (surface->is_emissive())
+        {
+            m_emitters->add_child(surface);
+        }
     }
 
     bool intersect(const Ray3f &ray, HitInfo &hit) const override;
@@ -45,6 +49,8 @@ public:
     {
         return m_surfaces->bounds();
     }
+
+    const SurfaceGroup& emiiters() const { return *m_emitters.get(); }
 
     /// Return the background color
     Color3f background(const Ray3f &ray) const;
@@ -70,6 +76,7 @@ public:
 private:
     shared_ptr<Camera>       m_camera;
     shared_ptr<SurfaceGroup> m_surfaces;
+    shared_ptr<SurfaceGroup> m_emitters;
     Color3f m_background  = Color3f(0.2f);
     int     m_num_samples = 1;
 

@@ -24,6 +24,8 @@ uint32_t Scene::random_seed = 53;
 /// Construct a new scene from a json object
 Scene::Scene(const json &j)
 {
+    m_emitters = make_shared<SurfaceGroup>();
+    
     parse(j);
 }
 
@@ -113,10 +115,13 @@ Image3f Scene::raytrace() const
                 auto y = r / width;
                 auto x = r % width;
 
+                sampler->start_pixel(x, y);
+
                 Color3f sum_color = Color3f(0.f);
                 for (auto i : range(sampler->sample_count()))
                 {
-                    auto ray = m_camera->generate_ray(Vec2f(x + 0.5f + randf(), y + 0.5f + randf()));
+                    Vec2f cam_ran = sampler->next2f();
+                    auto ray = m_camera->generate_ray(Vec2f(x + 0.5f + cam_ran.x, y + 0.5f + cam_ran.y));
                     if (m_integrator)
                     {
                         sum_color += m_integrator->Li(*this, *sampler.get(), ray);
@@ -125,9 +130,11 @@ Image3f Scene::raytrace() const
                     {
                         sum_color += recursive_color(ray, 0);
                     }
+
+                    sampler->advance();
                 }
 
-                image(x, y) = sum_color / m_num_samples;
+                image(x, y) = sum_color / sampler->sample_count();
                 ++progress;
             }
         }
@@ -137,10 +144,12 @@ Image3f Scene::raytrace() const
     {
         for (auto x : range(image.width()))
         {
+            sampler->start_pixel(x, y);
             Color3f sum_color = Color3f(0.f);
             for (auto i : range(m_sampler->sampler_count()))
             {
-                auto ray = m_camera->generate_ray(Vec2f(x + 0.5f + randf(), y + 0.5f + randf()));
+                Vec2f cam_ran = sampler->next2f();
+                auto ray = m_camera->generate_ray(Vec2f(x + 0.5f + cam_ran.x, y + 0.5f + cam_ran.y));
                 if (m_integrator)
                 {
                     sum_color += m_integrator->Li(*this, *m_sampler.get(), ray);
@@ -151,7 +160,7 @@ Image3f Scene::raytrace() const
                 }
             }
 
-            image(x, y) = sum_color / m_num_samples;
+            image(x, y) = sum_color / m_sampler->sampler_count();
             ++progress;
         }
     }

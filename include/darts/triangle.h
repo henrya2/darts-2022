@@ -21,7 +21,7 @@ public:
 
     Box3f bounds() const override;
 
-    Color3f sample(EmitterRecord &rec, const Vec2f &rv) const override;
+    Color3f sample(EmitterRecord &rec, const Vec2f &rv, float rv1) const override;
     float   pdf(const Vec3f &o, const Vec3f &v) const override;
 
 

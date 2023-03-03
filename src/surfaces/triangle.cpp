@@ -212,7 +212,7 @@ Box3f Triangle::bounds() const
     return result;
 }
 
-Color3f Triangle::sample(EmitterRecord &rec, const Vec2f &rv) const
+Color3f Triangle::sample(EmitterRecord &rec, const Vec2f &rv, float rv1) const
 {
     auto iv0 = m_mesh->Fv[m_face_idx].x, iv1 = m_mesh->Fv[m_face_idx].y, iv2 = m_mesh->Fv[m_face_idx].z;
     auto p0 = m_mesh->vs[iv0], p1 = m_mesh->vs[iv1], p2 = m_mesh->vs[iv2];

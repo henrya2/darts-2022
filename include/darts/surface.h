@@ -135,7 +135,7 @@ public:
         \return                 The surface color value divided by the probability density of the sample.
                                 A zero value means that sampling failed.
     */
-    virtual Color3f sample(EmitterRecord &rec, const Vec2f &rv) const
+    virtual Color3f sample(EmitterRecord &rec, const Vec2f &rv, float rv1) const
     {
         throw DartsException("This surface does not support sampling.");
     }

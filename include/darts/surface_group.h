@@ -38,7 +38,7 @@ public:
 
     Box3f local_bounds() const override;
 
-    Color3f sample(EmitterRecord &rec, const Vec2f &rv) const override;
+    Color3f sample(EmitterRecord &rec, const Vec2f &rv, float rv1) const override;
 
     pair<const Surface *, float> sample_child(float &rv1) const override;
     float                        child_prob() const override;

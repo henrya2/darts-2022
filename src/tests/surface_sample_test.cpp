@@ -45,7 +45,7 @@ bool SurfaceSampleTest::sample(Vec3f &dir, const Vec2f &rv, float rv1)
     // Sample geometry
     EmitterRecord rec;
     rec.o = Vec3f(0.f);
-    surface->sample(rec, rv);
+    surface->sample(rec, rv, rv1);
     dir = normalize(rec.wi);
 
     return true;

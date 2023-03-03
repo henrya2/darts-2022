@@ -61,12 +61,12 @@ Box3f SurfaceGroup::local_bounds() const
 {
     return m_bounds;
 }
-Color3f SurfaceGroup::sample(EmitterRecord &rec, const Vec2f &rv) const
+
+Color3f SurfaceGroup::sample(EmitterRecord &rec, const Vec2f &rv, float rv1) const
 {
-    float rv1 = randf();
     auto picked_child = sample_child(rv1);
 
-    auto child_color = picked_child.first->sample(rec, rv);
+    auto child_color = picked_child.first->sample(rec, rv, rv1);
     rec.pdf *= picked_child.second;
 
     return child_color / picked_child.second;
