@@ -16,6 +16,9 @@ public:
 
         m_dim_1D = 0;
         m_dim_2D = 0;
+
+        m_p1D = 0;
+        m_p2D = 0;
     }
 
     /**
@@ -32,6 +35,12 @@ public:
         cloned->m_current_sample    = m_current_sample;
         cloned->m_current_dimension = m_current_dimension;
 
+        cloned->m_dim_1D            = m_dim_1D;
+        cloned->m_dim_2D            = m_dim_2D;
+        cloned->m_p1D               = m_p1D;
+        cloned->m_p2D               = m_p2D;
+        cloned->m_rng               = m_rng;
+
         return std::move(cloned);
     }
 
@@ -39,7 +48,7 @@ public:
     {
         Sampler::set_base_seed(s);
 
-        p1D = s;
+        m_p1D = s;
 
         m_rng.seed(s);
     }
@@ -48,7 +57,7 @@ public:
     {
         Sampler::seed(x, y);
 
-        p2D = x * y;
+        m_p2D = x * y;
 
         m_rng.seed(x, y);
     }
@@ -84,8 +93,8 @@ protected:
 
     int m_dim_1D;
     int m_dim_2D;
-    int p1D;
-    int p2D;
+    int m_p1D;
+    int m_p2D;
 
     pcg32 m_rng;
 };
