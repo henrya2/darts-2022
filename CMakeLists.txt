@@ -35,6 +35,8 @@ list(
   src/media/vacuum.cpp
   src/tests/photon_map_test.cpp
   # Additional files for PA5 below
+  src/integrators/path_tracer_mis.cpp
+  src/integrators/path_tracer_mixture.cpp
   src/integrators/path_tracer_nee.cpp
   src/samplers/cmj.cpp
   src/tests/surface_sample_test.cpp
